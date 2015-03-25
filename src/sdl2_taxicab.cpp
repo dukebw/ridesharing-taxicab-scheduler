@@ -64,12 +64,12 @@ sdl2Init() {
 }
 
 internal SDL_Texture * 
-loadTexture(char *fileName) {
+sdl2LoadTexture(char *fileName) {
   // NOTE(Zach): The final optimized image
   SDL_Texture *newTexture = NULL;
 
   // NOTE(Zach): Load image at specified path
-  SDL_Surface *loadedSurface = SDL_LoadBMP(fileName); //use a c string
+  SDL_Surface *loadedSurface = SDL_LoadBMP(fileName);
   if (loadedSurface == NULL) {
     printf("Unable to load image %s! SDL Error: %s\n", fileName, 
         SDL_GetError());
@@ -113,7 +113,7 @@ sdl2LoadMedia() {
 
   // NOTE(brendan): Load grid texture
   // TODO(brendan): remove; testing
-  gGridTexture = loadTexture((char *)"../misc/simple_grid.bmp");
+  gGridTexture = sdl2LoadTexture((char *)"../misc/simple_grid.bmp");
   if (gGridTexture == 0) {
     printf( "Failed to load grid texture!\n" );
     success = false;
