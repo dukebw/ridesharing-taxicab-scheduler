@@ -6,14 +6,10 @@ Creator: Brendan Duke
 Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 ======================================================================== */
 
+#include "helper.h"
+#include "taxicab.h"
 #include <stdio.h>
 #include <SDL2/SDL.h>
-
-// NOTE(brendan): to change static so that we can distinguish between
-// global variables etc. then we can e.g. search and fix global vars
-#define internal static
-#define local_persist static
-#define global_variable static
 
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
@@ -175,9 +171,13 @@ int main(int argc, char *argv[]) {
     // NOTE(brendan): Main loop flag
     bool globalRunning = true;
 
+    // NOTE(brendan): state (model) of the taxis on the road network
+    TaxiState taxiState = {};
+
     // NOTE(brendan): while application is running
     while (globalRunning) {
       globalRunning = sdl2HandleEvents();
+      updateAndRender(&taxiState);
       sdl2Render();
     }
   }

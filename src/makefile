@@ -6,7 +6,7 @@ LDFLAGS=$(SDL_LDFLAGS)
 
 CC=g++
 
-SOURCES=sdl2_taxicab.cpp
+SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=taxicab_scheduler
 # Build directory
@@ -36,3 +36,7 @@ clean:
 
 spotless:
 	rm -f *.o *~ .*~ $(BUILD)$(EXECUTABLE)
+
+sdl2_taxicab.o: helper.h taxicab.h
+taxicab.o: taxicab.h edge_weighted_digraph.h
+edge_weighted_digraph.o: edge_weighted_digraph.h helper.h linked_list.h
