@@ -7,22 +7,46 @@
    ======================================================================== */
 
 #include "taxicab.h"
+#include <stdio.h>
 
 // TODO(brendan): testing; remove
-#define NUMBER_VERTICES 64
+#define DIMENSION 8
+
+// -------------------------------------------------------------------------
+// Access functions
+// ------------------------------------------------------------------------
 
 // NOTE(brendan): does updating and rendering for applications
 void updateAndRender(TaxiState *taxiState) {
   if (taxiState->graphInitialized) {
   }
   else {
-    makeEdgeWeightedDigraph(&taxiState->roadNetwork, NUMBER_VERTICES);
+    makeEdgeWeightedDigraph(&taxiState->roadNetwork, DIMENSION*DIMENSION);
     taxiState->graphInitialized = true;
-    // TODO(brendan): debugging; remove
-    for (int i = 0; i < taxiState->roadNetwork.vertices; ++i) {
-      if (taxiState->roadNetwork.adj[i] == 0) {
-        printf("%d\n", i);
+    
+    for (int row = 0; row < DIMENSION; ++row) {
+      for (int col = 0; col < DIMENSION; ++col) {
+        if (row > 0) {
+          addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
+                  (row - 1)*DIMENSION + col);
+        }
+        if (col > 0) {
+          addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
+                  row*DIMENSION + (col - 1));
+        }
+        if (row < (DIMENSION - 1)) {
+          addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
+                  (row + 1)*DIMENSION + col);
+        }
+        if (col < (DIMENSION - 1)) {
+          addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
+                  row*DIMENSION + (col + 1));
+        }
       }
     }
   }
 }
+
+// -------------------------------------------------------------------------
+// Local functions
+// ------------------------------------------------------------------------

@@ -20,4 +20,7 @@ struct EdgeWeightedDigraph {
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
 void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices);
 
+// NOTE(brendan): add the vertex (from, to) to the digraph
+void addEdge(EdgeWeightedDigraph *digraph, int from, int to);
+
 #endif /* EDGE_WEIGHTED_DIGRAPH_H */

@@ -10,23 +10,36 @@
 #include "helper.h"
 #include "edge_weighted_digraph.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 // -------------------------------------------------------------------------
 // Forward declarations
 // ------------------------------------------------------------------------
+
 internal void
 destroyAdjacencyLists(EdgeWeightedDigraph *digraph);
 
 // -------------------------------------------------------------------------
 // Access functions
 // ------------------------------------------------------------------------
+
+// NOTE(brendan): add the vertex (from, to) to the digraph
+void addEdge(EdgeWeightedDigraph *digraph, int from, int to) {
+  if (digraph) {
+    addToList(digraph->adj[from], to);
+    ++digraph->edges;
+  }
+  else {
+    printf("bad digraph -- passed 0\n");
+  }
+}
+
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
 void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) {
   if (digraph) {
     destroyAdjacencyLists(digraph);
     digraph->vertices = vertices;
-    digraph->adj = 
-      (List<DirectedEdge> **)malloc(vertices*sizeof(List<DirectedEdge> *));
+    digraph->adj = (List **)malloc(vertices*sizeof(List *));
     // NOTE(brendan): every malloc introduces a failure point
     if (digraph->adj) {
       for (int vertexIndex = 0;
@@ -54,7 +67,8 @@ destroyAdjacencyLists(EdgeWeightedDigraph *digraph) {
     for (int vertexIndex = 0; 
          vertexIndex < digraph->vertices; 
          ++vertexIndex) {
-      List<DirectedEdge>::emptyList(&digraph->adj[vertexIndex]);
+      emptyList(&digraph->adj[vertexIndex]);
+      digraph->adj[vertexIndex] = 0;
     }
     free(digraph->adj);
   }
