@@ -48,6 +48,10 @@ void updateAndRender(TaxiState *taxiState) {
         }
       }
     }
+
+    printf("edges: %d\n", taxiState->roadNetwork.edges);
+    // TODO(brendan): remove; debugging
+    printGraph(&taxiState->roadNetwork);
   }
 }
 
@@ -57,5 +61,6 @@ void updateAndRender(TaxiState *taxiState) {
 internal float speed() {
   local_persist int minSpeed = 40;
   local_persist int maxSpeed = 100;
-  return (float)rand()/(RAND_MAX + 1) * (maxSpeed - minSpeed) + minSpeed;
+  return (float)((double)rand()/(unsigned)(RAND_MAX + 1)*
+      (maxSpeed - minSpeed) + minSpeed);
 }

@@ -17,6 +17,9 @@ struct EdgeWeightedDigraph {
   List<DirectedEdge> **adj;
 };
 
+// TODO(brendan): remove?; debugging purposes
+void printGraph(EdgeWeightedDigraph *digraph);
+
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
 void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices);
 
