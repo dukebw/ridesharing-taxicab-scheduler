@@ -10,6 +10,7 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 #include "taxicab.h"
 #include <stdio.h>
 #include <SDL2/SDL.h>
+#include <time.h>
 
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
@@ -173,6 +174,8 @@ int main(int argc, char *argv[]) {
 
     // NOTE(brendan): state (model) of the taxis on the road network
     TaxiState taxiState = {};
+
+    srand((unsigned)time(0));
 
     // NOTE(brendan): while application is running
     while (globalRunning) {

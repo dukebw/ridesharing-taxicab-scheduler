@@ -8,9 +8,13 @@
 
 #include "taxicab.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include "helper.h"
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
+
+internal float speed();
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -28,19 +32,19 @@ void updateAndRender(TaxiState *taxiState) {
       for (int col = 0; col < DIMENSION; ++col) {
         if (row > 0) {
           addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                  (row - 1)*DIMENSION + col);
+                  (row - 1)*DIMENSION + col, speed());
         }
         if (col > 0) {
           addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                  row*DIMENSION + (col - 1));
+                  row*DIMENSION + (col - 1), speed());
         }
         if (row < (DIMENSION - 1)) {
           addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                  (row + 1)*DIMENSION + col);
+                  (row + 1)*DIMENSION + col, speed());
         }
         if (col < (DIMENSION - 1)) {
           addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                  row*DIMENSION + (col + 1));
+                  row*DIMENSION + (col + 1), speed());
         }
       }
     }
@@ -50,3 +54,8 @@ void updateAndRender(TaxiState *taxiState) {
 // -------------------------------------------------------------------------
 // Local functions
 // ------------------------------------------------------------------------
+internal float speed() {
+  local_persist int minSpeed = 40;
+  local_persist int maxSpeed = 100;
+  return (float)rand()/(RAND_MAX + 1) * (maxSpeed - minSpeed) + minSpeed;
+}

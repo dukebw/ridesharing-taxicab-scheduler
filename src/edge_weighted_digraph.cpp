@@ -24,13 +24,21 @@ destroyAdjacencyLists(EdgeWeightedDigraph *digraph);
 // ------------------------------------------------------------------------
 
 // NOTE(brendan): add the vertex (from, to) to the digraph
-void addEdge(EdgeWeightedDigraph *digraph, int from, int to) {
-  if (digraph) {
-    addToList(digraph->adj[from], to);
-    ++digraph->edges;
-  }
-  else {
-    printf("bad digraph -- passed 0\n");
+void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) {
+  DirectedEdge *edge = (DirectedEdge *)malloc(sizeof(DirectedEdge));
+  if(edge) {
+    edge->from = from;
+    edge->to = to;
+    edge->weight = weight;
+      if (digraph) {
+      List<DirectedEdge>::addToList(edge, digraph->adj[from]);
+      ++digraph->edges;
+    }
+    else {
+      printf("bad digraph -- passed 0\n");
+    }
+  } else {
+    printf("bad edge allocation -- passed 0\n");
   }
 }
 
@@ -39,7 +47,7 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) {
   if (digraph) {
     destroyAdjacencyLists(digraph);
     digraph->vertices = vertices;
-    digraph->adj = (List **)malloc(vertices*sizeof(List *));
+    digraph->adj = (List<DirectedEdge> **)malloc(vertices*sizeof(List<DirectedEdge> *));
     // NOTE(brendan): every malloc introduces a failure point
     if (digraph->adj) {
       for (int vertexIndex = 0;
@@ -67,7 +75,7 @@ destroyAdjacencyLists(EdgeWeightedDigraph *digraph) {
     for (int vertexIndex = 0; 
          vertexIndex < digraph->vertices; 
          ++vertexIndex) {
-      emptyList(&digraph->adj[vertexIndex]);
+      List<DirectedEdge>::emptyList(&digraph->adj[vertexIndex]);
       digraph->adj[vertexIndex] = 0;
     }
     free(digraph->adj);

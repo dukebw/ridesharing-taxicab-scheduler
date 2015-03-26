@@ -21,6 +21,6 @@ struct EdgeWeightedDigraph {
 void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices);
 
 // NOTE(brendan): add the vertex (from, to) to the digraph
-void addEdge(EdgeWeightedDigraph *digraph, int from, int to);
+void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight);
 
 #endif /* EDGE_WEIGHTED_DIGRAPH_H */
