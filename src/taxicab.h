@@ -2,10 +2,12 @@
 #define TAXICAB_H
 
 #include "edge_weighted_digraph.h"
+#include <SDL2/SDL.h>
 
 // NOTE(brendan): struct containing all the 
 struct TaxiState {
   EdgeWeightedDigraph roadNetwork;
+  SDL_Renderer *renderer;
   bool graphInitialized;
 };
 

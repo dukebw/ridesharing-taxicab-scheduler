@@ -21,7 +21,10 @@ internal float speed();
 // ------------------------------------------------------------------------
 
 // NOTE(brendan): does updating and rendering for applications
-void updateAndRender(TaxiState *taxiState) {
+void updateAndRender(TaxiState *taxiState) 
+{
+
+  // NOTE(brendan): updating
   if (taxiState->graphInitialized) {
   }
   else {
@@ -58,9 +61,27 @@ void updateAndRender(TaxiState *taxiState) {
 // -------------------------------------------------------------------------
 // Local functions
 // ------------------------------------------------------------------------
-internal float speed() {
+internal float speed() 
+{
   local_persist int minSpeed = 40;
   local_persist int maxSpeed = 100;
   return (float)((double)rand()/(unsigned)(RAND_MAX + 1)*
       (maxSpeed - minSpeed) + minSpeed);
+}
+
+
+// -------------------------------------------------------------------------
+// SDL functions
+// ------------------------------------------------------------------------
+// NOTE(brendan): places the image at (x, y)
+inline void
+placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y, 
+           int width, int height) 
+{
+	SDL_Rect destRect;
+  destRect.x = x;
+  destRect.y = y;
+  destRect.w = width;
+  destRect.h = height;
+	SDL_RenderCopy(renderer, image, NULL, &destRect ); 
 }

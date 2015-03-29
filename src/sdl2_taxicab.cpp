@@ -14,9 +14,8 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
-// NOTE(brendan): The window renderer
-global_variable SDL_Renderer *gRenderer = NULL;
-global_variable SDL_Texture *gGridTexture = NULL;
+global_variable SDL_Texture *gBackgroundTexture = NULL;
+global_variable SDL_Texture *gTaxiTexture = NULL;
 
 // NOTE(brendan): Screen dimension constants
 internal const int SCREEN_WIDTH = 640;
@@ -24,7 +23,8 @@ internal const int SCREEN_HEIGHT = 480;
 
 // NOTE(brendan): does the necessary initialization of SDL2 at program startup
 internal bool 
-sdl2Init() {
+sdl2Init(SDL_Renderer **renderer)
+{
   // NOTE(brendan): Initialization flag
   bool success = true;
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -43,16 +43,16 @@ sdl2Init() {
     }
     else {
       // NOTE(brendan): Create vsynced renderer for window
-      gRenderer = SDL_CreateRenderer(gWindow, -1, 
+      *renderer = SDL_CreateRenderer(gWindow, -1, 
           SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-      if (gRenderer == NULL) {
+      if (renderer == NULL) {
         printf("Renderer could not be created! SDL Error: %s\n", 
             SDL_GetError());
         success = false;
       }
       else {
         // NOTE(brendan): Initialize renderer color
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+        SDL_SetRenderDrawColor(*renderer, 0xFF, 0xFF, 0xFF, 0xFF);
       }
     }
   }
@@ -61,11 +61,12 @@ sdl2Init() {
 }
 
 internal SDL_Texture * 
-sdl2LoadTexture(char *fileName) {
-  // NOTE(Zach): The final optimized image
+sdl2LoadTexture(char *fileName, SDL_Renderer *renderer) 
+{
+  // NOTE(brendan): The final optimized image
   SDL_Texture *newTexture = NULL;
 
-  // NOTE(Zach): Load image at specified path
+  // NOTE(brendan): Load image at specified path
   SDL_Surface *loadedSurface = SDL_LoadBMP(fileName);
   if (loadedSurface == NULL) {
     printf("Unable to load image %s! SDL Error: %s\n", fileName, 
@@ -90,13 +91,13 @@ sdl2LoadTexture(char *fileName) {
           SDL_MapRGB( scaledSurface->format, 0xFF, 0xFF, 0xFF));
 
       //Create texture from surface pixels
-      newTexture = SDL_CreateTextureFromSurface(gRenderer, scaledSurface);
+      newTexture = SDL_CreateTextureFromSurface(renderer, scaledSurface);
       if (newTexture == NULL) {
         printf("Unable to create texture from %s! SDL Error: %s\n", 
             fileName,SDL_GetError());
       } 
 
-      // NOTE(Zach): Get rid of old loaded surface
+      // NOTE(brendan): Get rid of old loaded surface
       SDL_FreeSurface(scaledSurface);
     }
   }
@@ -104,14 +105,15 @@ sdl2LoadTexture(char *fileName) {
 }
 
 internal bool 
-sdl2LoadMedia() {
+sdl2LoadMedia(SDL_Renderer *renderer) 
+{
   // NOTE(brendan): Loading success flag
   bool success = true;
 
   // NOTE(brendan): Load grid texture
   // TODO(brendan): remove; testing
-  gGridTexture = sdl2LoadTexture((char *)"../misc/simple_grid.bmp");
-  if (gGridTexture == 0) {
+  gBackgroundTexture = sdl2LoadTexture((char *)"../misc/simple_grid.bmp", renderer);
+  if (gBackgroundTexture == 0) {
     printf( "Failed to load grid texture!\n" );
     success = false;
   }
@@ -122,7 +124,8 @@ sdl2LoadMedia() {
 // NOTE(brendan): handle events, e.g. mouse clicks, key presses etc.
 // returns false if quit button is pressed; true otherwise.
 internal bool
-sdl2HandleEvents() {
+sdl2HandleEvents() 
+{
   // NOTE(brendan): event handler
   SDL_Event e;
   // NOTE(brendan): Handle events on queue
@@ -136,44 +139,44 @@ sdl2HandleEvents() {
 }
 
 internal void
-sdl2Render() {
+sdl2Render(SDL_Renderer *renderer) 
+{
   // NOTE(brendan): Clear screen
   // TODO(brendan): need to set draw colour here?
-  SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
-  SDL_RenderClear(gRenderer);
-  SDL_RenderCopy(gRenderer, gGridTexture, 0, 0);
-  SDL_RenderPresent(gRenderer);
+  SDL_SetRenderDrawColor( renderer, 0xFF, 0xFF, 0xFF, 0xFF );
+  SDL_RenderClear(renderer);
+  SDL_RenderCopy(renderer, gBackgroundTexture, 0, 0);
+  SDL_RenderPresent(renderer);
 }
 
 // NOTE(brendan): free resources and quit SDL
-void sdl2Close() {
+void sdl2Close() 
+{
 	// NOTE(brendan): Free loaded images
-  SDL_DestroyTexture(gGridTexture);
-  gGridTexture = NULL;
+  SDL_DestroyTexture(gBackgroundTexture);
+  gBackgroundTexture = NULL;
 
-	// NOTE(brendan): Destroy window	
-	SDL_DestroyRenderer(gRenderer);
 	SDL_DestroyWindow(gWindow);
 	gWindow = NULL;
-	gRenderer = NULL;
 
 	// NOTE(brendan): Quit SDL subsystems
 	SDL_Quit();
 }
 
-int main(int argc, char *argv[]) {
-  if (!sdl2Init()) {
+int main(int argc, char *argv[]) 
+{
+  // NOTE(brendan): state (model) of the taxis on the road network
+  TaxiState taxiState = {};
+
+  if (!sdl2Init(&taxiState.renderer)) {
     printf("Failed to initialize!\n");
   }
-  else if (!sdl2LoadMedia()) {
+  else if (!sdl2LoadMedia(taxiState.renderer)) {
     printf("Failed to load media!\n");
   }
   else {
     // NOTE(brendan): Main loop flag
     bool globalRunning = true;
-
-    // NOTE(brendan): state (model) of the taxis on the road network
-    TaxiState taxiState = {};
 
     srand((unsigned)time(0));
 
@@ -181,7 +184,7 @@ int main(int argc, char *argv[]) {
     while (globalRunning) {
       globalRunning = sdl2HandleEvents();
       updateAndRender(&taxiState);
-      sdl2Render();
+      sdl2Render(taxiState.renderer);
     }
   }
 
