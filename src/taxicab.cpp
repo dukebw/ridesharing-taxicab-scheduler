@@ -14,9 +14,6 @@
 // TODO(brendan): testing; remove
 #define DIMENSION 8
 
-// NOTE(brendan): button array
-
-
 // -------------------------------------------------------------------------
 // Forward declarations
 // ------------------------------------------------------------------------
