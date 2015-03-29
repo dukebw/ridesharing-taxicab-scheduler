@@ -14,7 +14,18 @@
 // TODO(brendan): testing; remove
 #define DIMENSION 8
 
+// NOTE(brendan): button array
+
+
+// -------------------------------------------------------------------------
+// Forward declarations
+// ------------------------------------------------------------------------
+
 internal float speed();
+
+inline void
+placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y, 
+           int width, int height);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -23,6 +34,14 @@ internal float speed();
 // NOTE(brendan): does updating and rendering for applications
 void updateAndRender(TaxiState *taxiState) 
 {
+  // NOTE(brendan): Clear screen
+  // TODO(brendan): need to set draw colour here?
+  SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+  SDL_RenderClear(taxiState->renderer);
+  SDL_RenderCopy(taxiState->renderer, taxiState->backgroundTexture, 0, 0);
+  placeImage(taxiState->renderer, taxiState->taxiTexture, 50, 50, 50, 50);
+  placeImage(taxiState->renderer, taxiState->taxiTexture, 400, 150, 50, 50);
+  placeImage(taxiState->renderer, taxiState->taxiTexture, 100, 200, 50, 50);
 
   // NOTE(brendan): updating
   if (taxiState->graphInitialized) {
@@ -65,7 +84,7 @@ internal float speed()
 {
   local_persist int minSpeed = 40;
   local_persist int maxSpeed = 100;
-  return (float)((double)rand()/(unsigned)(RAND_MAX + 1)*
+  return (float)((double)rand()/(unsigned)(RAND_MAX)*
       (maxSpeed - minSpeed) + minSpeed);
 }
 

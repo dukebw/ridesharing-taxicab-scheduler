@@ -8,6 +8,8 @@
 struct TaxiState {
   EdgeWeightedDigraph roadNetwork;
   SDL_Renderer *renderer;
+  SDL_Texture *backgroundTexture;
+  SDL_Texture *taxiTexture;
   bool graphInitialized;
 };
 

@@ -14,8 +14,6 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
-global_variable SDL_Texture *gBackgroundTexture = NULL;
-global_variable SDL_Texture *gTaxiTexture = NULL;
 
 // NOTE(brendan): Screen dimension constants
 internal const int SCREEN_WIDTH = 640;
@@ -104,20 +102,30 @@ sdl2LoadTexture(char *fileName, SDL_Renderer *renderer)
   return newTexture;
 }
 
+inline bool
+sdl2LoadTextureFromFile(SDL_Texture **texture, SDL_Renderer *renderer, 
+                        char *filename)
+{
+  // NOTE(brendan): Load grid texture
+  // TODO(brendan): remove; testing
+  *texture = sdl2LoadTexture(filename, renderer);
+  if (*texture == 0) {
+    printf( "Failed to load texture at %s!\n", filename);
+    return false;
+  }
+  return true;
+}
+
 internal bool 
-sdl2LoadMedia(SDL_Renderer *renderer) 
+sdl2LoadMedia(TaxiState *taxiState) 
 {
   // NOTE(brendan): Loading success flag
   bool success = true;
-
-  // NOTE(brendan): Load grid texture
-  // TODO(brendan): remove; testing
-  gBackgroundTexture = sdl2LoadTexture((char *)"../misc/simple_grid.bmp", renderer);
-  if (gBackgroundTexture == 0) {
-    printf( "Failed to load grid texture!\n" );
-    success = false;
-  }
-
+  success = 
+    sdl2LoadTextureFromFile(&taxiState->backgroundTexture, taxiState->renderer, 
+                           (char *)"../misc/simple_grid.bmp");
+  success = sdl2LoadTextureFromFile(&taxiState->taxiTexture, taxiState->renderer, 
+                                    (char *)"../misc/taxi.bmp");
   return success;
 }
 
@@ -139,23 +147,14 @@ sdl2HandleEvents()
 }
 
 internal void
-sdl2Render(SDL_Renderer *renderer) 
+sdl2Render(TaxiState *taxiState) 
 {
-  // NOTE(brendan): Clear screen
-  // TODO(brendan): need to set draw colour here?
-  SDL_SetRenderDrawColor( renderer, 0xFF, 0xFF, 0xFF, 0xFF );
-  SDL_RenderClear(renderer);
-  SDL_RenderCopy(renderer, gBackgroundTexture, 0, 0);
-  SDL_RenderPresent(renderer);
+  SDL_RenderPresent(taxiState->renderer);
 }
 
 // NOTE(brendan): free resources and quit SDL
 void sdl2Close() 
 {
-	// NOTE(brendan): Free loaded images
-  SDL_DestroyTexture(gBackgroundTexture);
-  gBackgroundTexture = NULL;
-
 	SDL_DestroyWindow(gWindow);
 	gWindow = NULL;
 
@@ -171,7 +170,7 @@ int main(int argc, char *argv[])
   if (!sdl2Init(&taxiState.renderer)) {
     printf("Failed to initialize!\n");
   }
-  else if (!sdl2LoadMedia(taxiState.renderer)) {
+  else if (!sdl2LoadMedia(&taxiState)) {
     printf("Failed to load media!\n");
   }
   else {
@@ -184,7 +183,7 @@ int main(int argc, char *argv[])
     while (globalRunning) {
       globalRunning = sdl2HandleEvents();
       updateAndRender(&taxiState);
-      sdl2Render(taxiState.renderer);
+      sdl2Render(&taxiState);
     }
   }
 
