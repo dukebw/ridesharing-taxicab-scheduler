@@ -10,7 +10,6 @@
 struct DijkstraSPTree {
   float *distTo;
   int *edgeTo;
-  IndexMinPQ pq;
 };
 
 // NOTE(brendan): INPUT: edge-weighted digraph, source vertex

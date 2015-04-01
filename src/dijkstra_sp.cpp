@@ -14,7 +14,7 @@
 // Forward declarations
 // ------------------------------------------------------------------------
 
-internal void relax(void *spTreePtr, DirectedEdge *edge);
+internal void relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -38,13 +38,16 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
       spTree->distTo[distToIndex] = INFINITY;
     }
     spTree->distTo[source] = 0.0f;
+    spTree->edgeTo[source] = EDGE_TO_ROOT;
 
+    IndexMinPQ minpq = {};
     // NOTE(brendan): relax vertices in order of distance from source
-    makeIndexMinPQ(&spTree->pq, digraph->vertices);
-    pqInsert(&spTree->pq, source, spTree->distTo[source]);
-    while (pqEmpty(&spTree->pq)) {
-      int v = pqDelMin(&spTree->pq);
-      List<DirectedEdge *>::traverseList(relax, spTree, digraph->adj[v]);
+    makeIndexMinPQ(&minpq, digraph->vertices);
+    pqInsert(&minpq, source, spTree->distTo[source]);
+    while (!pqEmpty(&minpq)) {
+      int v = pqDelMin(&minpq);
+      List<DirectedEdge *>::traverseList(relax, spTree, &minpq, 
+                                         digraph->adj[v]);
     }
   }
   else {
@@ -65,11 +68,11 @@ pathTo(DijkstraSPTree *spTree, int dest)
     return 0;
   }
   // TODO(brendan): assert path != 0; failure point
-  List<int> *path = (List<int> *)malloc(sizeof(List<int>));
+  List<int> *path = List<int>::addToList(dest, 0);
   for (int nextVertex = spTree->edgeTo[dest];
        nextVertex != EDGE_TO_ROOT;
-       nextVertex = spTree->edgeTo[spTree->edgeTo[nextVertex]]) {
-    List<int>::addToList(nextVertex, path);
+       nextVertex = spTree->edgeTo[nextVertex]) {
+    path = List<int>::addToList(nextVertex, path);
   }
   return path;
 }
@@ -82,19 +85,20 @@ pathTo(DijkstraSPTree *spTree, int dest)
 // UPDATE: spTree; decreases the distance to w if going from v->w is cheaper
 // takes a void * so that it can be used with traverseList
 internal void
-relax(void *spTreePtr, DirectedEdge *edge)
+relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge)
 {
   DijkstraSPTree *spTree = (DijkstraSPTree *)spTreePtr;
+  IndexMinPQ *minpq = (IndexMinPQ *)minPQPtr;
   // TODO(brendan): assert inputs not null
   int v = edge->from, w = edge->to;
   if (spTree->distTo[w] > spTree->distTo[v] + edge->weight) {
     spTree->distTo[w] = spTree->distTo[v] + edge->weight;
     spTree->edgeTo[w] = v;
-    if (pqContains(&spTree->pq, w)) {
-      pqDecreaseWeight(&spTree->pq, w, spTree->distTo[w]);
+    if (pqContains(minpq, w)) {
+      pqDecreaseWeight(minpq, w, spTree->distTo[w]);
     }
     else {
-      pqInsert(&spTree->pq, w, spTree->distTo[w]);
+      pqInsert(minpq, w, spTree->distTo[w]);
     }
   }
 }

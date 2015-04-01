@@ -33,7 +33,8 @@ public:
 
   // NOTE(brendan): iterate over list, executing function f() on each node
   static void 
-  traverseList(void (*f)(void *, T), void *arg, List<T> *list);
+  traverseList(void (*f)(void *, void *, T), void *argOne, void *argTwo,
+               List<T> *list);
 
   // NOTE(brendan): write all the items in list contiguously to fp
   static List<T> *
@@ -111,10 +112,11 @@ List<T>::traverseList(void (*f)(T), List<T> *list)
 
 // NOTE(brendan): iterate over list, executing function f() on each node
 template<typename T> void 
-List<T>::traverseList(void (*f)(void *, T), void *arg, List<T> *list)
+List<T>::traverseList(void (*f)(void *, void *, T), void *argOne, 
+                      void *argTwo, List<T> *list)
 {
   for (; list != 0; list = list->next) {
-    (*f)(arg, list->item);
+    (*f)(argOne, argTwo, list->item);
   }
 }
 
