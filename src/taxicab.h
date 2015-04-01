@@ -4,12 +4,15 @@
 #include "edge_weighted_digraph.h"
 #include <SDL2/SDL.h>
 
+#define NUMBER_OF_IMAGES 2
+
+enum {BACKGROUND_TEXTURE, TAXI_TEXTURE};
+
 // NOTE(brendan): struct containing all the 
 struct TaxiState {
   EdgeWeightedDigraph roadNetwork;
   SDL_Renderer *renderer;
-  SDL_Texture *backgroundTexture;
-  SDL_Texture *taxiTexture;
+  SDL_Texture *textures[NUMBER_OF_IMAGES];
   bool graphInitialized;
 };
 

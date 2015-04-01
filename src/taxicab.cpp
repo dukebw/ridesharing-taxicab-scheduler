@@ -9,8 +9,8 @@
 #include "taxicab.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "helper.h"
 #include "dijkstra_sp.h"
+#include "helper.h"
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
@@ -36,10 +36,14 @@ void updateAndRender(TaxiState *taxiState)
   // TODO(brendan): need to set draw colour here?
   SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderClear(taxiState->renderer);
-  SDL_RenderCopy(taxiState->renderer, taxiState->backgroundTexture, 0, 0);
-  placeImage(taxiState->renderer, taxiState->taxiTexture, 50, 50, 50, 50);
-  placeImage(taxiState->renderer, taxiState->taxiTexture, 400, 150, 50, 50);
-  placeImage(taxiState->renderer, taxiState->taxiTexture, 100, 200, 50, 50);
+  SDL_RenderCopy(taxiState->renderer, 
+                 taxiState->textures[BACKGROUND_TEXTURE], 0, 0);
+  placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 50, 50, 
+             50, 50);
+  placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 400, 150, 
+             50, 50);
+  placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 100, 200, 
+             50, 50);
 
   // NOTE(brendan): updating
   if (taxiState->graphInitialized) {

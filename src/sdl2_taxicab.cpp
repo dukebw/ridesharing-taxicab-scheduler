@@ -12,6 +12,9 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 #include <SDL2/SDL.h>
 #include <time.h>
 
+internal char *imageNames[] = {(char *)"../misc/simple_grid.bmp", 
+                               (char *)"../misc/taxi.bmp"};
+
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
 
@@ -121,11 +124,13 @@ sdl2LoadMedia(TaxiState *taxiState)
 {
   // NOTE(brendan): Loading success flag
   bool success = true;
-  success = 
-    sdl2LoadTextureFromFile(&taxiState->backgroundTexture, taxiState->renderer, 
-                           (char *)"../misc/simple_grid.bmp");
-  success = sdl2LoadTextureFromFile(&taxiState->taxiTexture, taxiState->renderer, 
-                                    (char *)"../misc/taxi.bmp");
+  for (int imageIndex = 0;
+       success && (imageIndex < NUMBER_OF_IMAGES);
+       ++imageIndex) {
+    success = sdl2LoadTextureFromFile(&taxiState->textures[imageIndex],
+                                      taxiState->renderer,
+                                      imageNames[imageIndex]);
+  }
   return success;
 }
 
