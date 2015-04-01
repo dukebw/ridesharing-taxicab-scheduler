@@ -1,12 +1,13 @@
 SDL_CFLAGS=`sdl2-config --cflags`
 SDL_LDFLAGS=`sdl2-config --libs`
 
-CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11
+CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11 -g
 LDFLAGS=$(SDL_LDFLAGS)
 
 CC=g++
 
-SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp
+SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp\
+				dijkstra_sp.cpp index_min_pq.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=taxicab_scheduler
 # Build directory
@@ -38,5 +39,7 @@ spotless:
 	rm -f *.o *~ .*~ $(BUILD)$(EXECUTABLE)
 
 sdl2_taxicab.o: helper.h taxicab.h
-taxicab.o: taxicab.h edge_weighted_digraph.h
+taxicab.o: taxicab.h edge_weighted_digraph.h dijkstra_sp.h
 edge_weighted_digraph.o: edge_weighted_digraph.h helper.h linked_list.h
+dijkstra_sp.o: edge_weighted_digraph.h index_min_pq.h linked_list.h helper.h
+index_min_pq.o: helper.h

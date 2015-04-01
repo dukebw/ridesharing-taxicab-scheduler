@@ -27,19 +27,21 @@ printEdge(DirectedEdge *edge);
 // ------------------------------------------------------------------------
 
 // TODO(brendan): remove?; debugging purposes
-void printGraph(EdgeWeightedDigraph *digraph) {
+void printGraph(EdgeWeightedDigraph *digraph) 
+{
   if (digraph) {
     for (int vertexIndex = 0;
          vertexIndex < digraph->vertices;
          ++vertexIndex) {
-      List<DirectedEdge>::traverseList(printEdge, digraph->adj[vertexIndex]);
+      List<DirectedEdge *>::traverseList(printEdge, digraph->adj[vertexIndex]);
       printf("\n");
     }
   }
 }
 
 // NOTE(brendan): add the vertex (from, to) to the digraph
-void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) {
+void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) 
+{
   DirectedEdge *edge = (DirectedEdge *)malloc(sizeof(DirectedEdge));
   if(edge) {
     edge->from = from;
@@ -47,7 +49,7 @@ void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) {
     edge->weight = weight;
     if (digraph) {
       digraph->adj[from] = 
-        List<DirectedEdge>::addToList(edge, digraph->adj[from]);
+        List<DirectedEdge *>::addToList(edge, digraph->adj[from]);
       ++digraph->edges;
     }
     else {
@@ -60,24 +62,25 @@ void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) {
 }
 
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
-void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) {
-  if (digraph) {
-    destroyAdjacencyLists(digraph);
-    digraph->vertices = vertices;
-    digraph->adj = 
-      (List<DirectedEdge> **)malloc(vertices*sizeof(List<DirectedEdge> *));
-    // NOTE(brendan): every malloc introduces a failure point
-    if (digraph->adj) {
-      for (int vertexIndex = 0;
-          vertexIndex < vertices;
-          ++vertexIndex) {
-        digraph->adj[vertexIndex] = 0;
-      }
+// INPUT: number of vertices we want. OUTPUT: digraph of size V in first param
+void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) 
+{
+  // TODO(brendan): assert inputs not null
+  destroyAdjacencyLists(digraph);
+  digraph->vertices = vertices;
+  digraph->adj = 
+    (List<DirectedEdge *> **)malloc(vertices*sizeof(List<DirectedEdge> *));
+  // NOTE(brendan): every malloc introduces a failure point
+  if (digraph->adj) {
+    for (int vertexIndex = 0;
+        vertexIndex < vertices;
+        ++vertexIndex) {
+      digraph->adj[vertexIndex] = 0;
     }
-    else {
-      // TODO(brendan): logging
-      printf("Could not allocate adjacency lists\n");
-    }
+  }
+  else {
+    // TODO(brendan): logging
+    printf("Could not allocate adjacency lists\n");
   }
 }
 
@@ -88,21 +91,24 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) {
 // NOTE(brendan): frees adjacency lists of digraph
 // Client expected to set adj to 0
 internal void
-destroyAdjacencyLists(EdgeWeightedDigraph *digraph) {
+destroyAdjacencyLists(EdgeWeightedDigraph *digraph) 
+{
   if (digraph) {
     for (int vertexIndex = 0; 
          vertexIndex < digraph->vertices; 
          ++vertexIndex) {
-      List<DirectedEdge>::emptyList(&digraph->adj[vertexIndex]);
+      List<DirectedEdge *>::emptyList(&digraph->adj[vertexIndex]);
       digraph->adj[vertexIndex] = 0;
     }
     free(digraph->adj);
+    digraph->adj = 0;
   }
 }
 
 // NOTE(brendan): prints an edge's to, from and weight
 internal void
-printEdge(DirectedEdge *edge) {
+printEdge(DirectedEdge *edge) 
+{
   if (edge) {
     printf("%d -> %d (%.2f) ", edge->from, edge->to, edge->weight);
   }

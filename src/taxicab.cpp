@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "helper.h"
+#include "dijkstra_sp.h"
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
@@ -68,9 +69,18 @@ void updateAndRender(TaxiState *taxiState)
       }
     }
 
-    printf("edges: %d\n", taxiState->roadNetwork.edges);
     // TODO(brendan): remove; debugging
+    printf("edges: %d\n", taxiState->roadNetwork.edges);
     printGraph(&taxiState->roadNetwork);
+
+    DijkstraSPTree spTree = {};
+    makeDijkstraSPTree(&spTree, &taxiState->roadNetwork, 0);
+    List<int> *testPath = pathTo(&spTree, 63);
+    for (List<int> *pathPtr = testPath;
+         (pathPtr != 0);
+         pathPtr = pathPtr->next) {
+      printf((pathPtr->next != 0) ? "%d -> " : "%d\n", pathPtr->item);
+    }
   }
 }
 

@@ -6,10 +6,12 @@
 
 template<typename T>
 class List {
-  T *item;
+// TODO(brendan): change back to private
+public:
+  T item;
   List<T> *next;
 
-  // NOTE(brendan): private constructor so that clients can't make a LIst
+  // NOTE(brendan): private constructor so that clients can't make a List
   // object except by using addToList(item, null);
   List() {}
 
@@ -19,19 +21,19 @@ public:
 
   // NOTE(brendan): add item T to the list
   static List<T> *
-  addToList(T *newitem, List<T> *list);
+  addToList(T newitem, List<T> *list);
 
   // NOTE(brendan): delete the first occurrence of item T; returns the list
   static List<T> *
-  deleteFromList(T *toDeleteItem, List<T> *list);
+  deleteFromList(T toDeleteItem, List<T> *list);
 
   // NOTE(brendan): iterate over list, executing function f() on each node
   static void 
-  traverseList(void (*f)(T *item), List<T> *list);
+  traverseList(void (*f)(T), List<T> *list);
 
   // NOTE(brendan): iterate over list, executing function f() on each node
   static void 
-  traverseList(void (*f)(T *item, float dt), float dt, List<T> *list);
+  traverseList(void (*f)(void *, T), void *arg, List<T> *list);
 
   // NOTE(brendan): write all the items in list contiguously to fp
   static List<T> *
@@ -44,25 +46,22 @@ public:
   // NOTE(brendan): iterate over list, returning the item of the first node
   // that satisfies function f
   static T *
-  reduceList(bool (*f)(T *listItem, T *item), T *newest, List<T> *list);
+  reduceList(bool (*f)(T listItem, T item), T newest, List<T> *list);
 };
 
 // NOTE(brendan): add item T to the list
 template<typename T> List<T> *
-List<T>::addToList(T *newItem, List<T> *list) {
-  if(newItem != NULL) {
-    List<T> *resultList = (List<T> *)malloc(sizeof(List<T>));
-    resultList->item = newItem;
-    resultList->next = list;
-    return resultList;
-  }
-  else {
-    return list;
-  }
+List<T>::addToList(T newItem, List<T> *list) 
+{
+  List<T> *resultList = (List<T> *)malloc(sizeof(List<T>));
+  resultList->item = newItem;
+  resultList->next = list;
+  return resultList;
 }
 
 template<typename T> void 
-List<T>::emptyList(List<T> **list) {
+List<T>::emptyList(List<T> **list) 
+{
 	List<T> *current = *list;
 	List<T> *previous = NULL;
 	while (current != NULL) {
@@ -75,12 +74,13 @@ List<T>::emptyList(List<T> **list) {
 
 // NOTE(brendan): delete the first occurence of item T; returns the list
 template<typename T> List<T> *
-List<T>::deleteFromList(T *toDeleteItem, List<T> *list) {
+List<T>::deleteFromList(T toDeleteItem, List<T> *list) 
+{
   if(list != NULL) {
     List<T> *current;
     List<T> *previous;
     for(current = list, previous = NULL; 
-        current != NULL && current->item != toDeleteItem; 
+        (current != NULL) && (current->item != toDeleteItem); 
         previous = current, current = current->next);
     if(current != NULL) {
       if(previous != NULL) {
@@ -100,7 +100,8 @@ List<T>::deleteFromList(T *toDeleteItem, List<T> *list) {
 
 // NOTE(brendan): iterate over list, executing function f() on each node
 template<typename T> void 
-List<T>::traverseList(void (*f)(T *item), List<T> *list) {
+List<T>::traverseList(void (*f)(T), List<T> *list) 
+{
   for(List<T> *current = list;
       current != NULL;
       current = current->next) {
@@ -110,23 +111,25 @@ List<T>::traverseList(void (*f)(T *item), List<T> *list) {
 
 // NOTE(brendan): iterate over list, executing function f() on each node
 template<typename T> void 
-List<T>::traverseList(void (*f)(T *item, float dt), float dt, List<T> *list) {
-  for(List<T> *current = list;
-      current != NULL;
-      current = current->next) {
-    (*f)(current->item, dt);
+List<T>::traverseList(void (*f)(void *, T), void *arg, List<T> *list)
+{
+  for (; list != 0; list = list->next) {
+    (*f)(arg, list->item);
   }
 }
+
+// TODO(brendan): testing? changed from pointer member item to primitive
 // NOTE(brendan): write all the items in list contiguously to fp
 template<typename T> List<T> *
-List<T>::readListFromFile(List<T> *list, FILE *fp) {
+List<T>::readListFromFile(List<T> *list, FILE *fp) 
+{
   List<T>::emptyList(&list);
   int count;
   fread(&count, sizeof(int), 1, fp);
   printf("tokens read: %d\n", count);
   for(int i = 0; i < count; ++i) {
-    T *item = (T *)malloc(sizeof(T));
-    fread(item, sizeof(T), 1, fp);
+    T item;
+    fread(&item, sizeof(T), 1, fp);
     list = List<T>::addToList(item, list);
   }
   return list;
@@ -134,11 +137,12 @@ List<T>::readListFromFile(List<T> *list, FILE *fp) {
 
 // NOTE(brendan): write all the items in list contiguously to fp
 template<typename T> void
-List<T>::writeListToFile(List<T> *list, FILE *fp) {
+List<T>::writeListToFile(List<T> *list, FILE *fp) 
+{
   fseek(fp, sizeof(int), SEEK_CUR);
   int count = 0;
 	for(; list != NULL; list = list->next) {
-    fwrite(list->item, sizeof(T), 1, fp);
+    fwrite(&list->item, sizeof(T), 1, fp);
     ++count;
 	}
   printf("tokens written: %d\n", count);
@@ -150,8 +154,8 @@ List<T>::writeListToFile(List<T> *list, FILE *fp) {
 // NOTE(brendan): iterate over list, returning the item of the first node
 // that satisfies function f
 template<typename T> T *
-List<T>::reduceList(bool (*f)(T *listItem, T *item), T *newest, 
-    List<T> *list) {
+List<T>::reduceList(bool (*f)(T listItem, T item), T newest, List<T> *list) 
+{
 	for(; list != NULL; list = list->next) {
 		if((*f)(list->item, newest) == true ) {
       return list->item;	

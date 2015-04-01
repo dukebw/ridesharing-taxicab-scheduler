@@ -14,7 +14,7 @@ struct DirectedEdge {
 struct EdgeWeightedDigraph {
   int vertices;
   int edges;
-  List<DirectedEdge> **adj;
+  List<DirectedEdge *> **adj;
 };
 
 // TODO(brendan): remove?; debugging purposes
