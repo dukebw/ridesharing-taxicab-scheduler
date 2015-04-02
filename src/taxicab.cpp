@@ -54,17 +54,19 @@ void updateAndRender(TaxiState *taxiState, int dt)
   if (taxiState->graphInitialized) {
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
-      DirectedEdge *currentEdge = currentTaxi->shortestPath->edgeList->item;
-      Point destination = taxiState->intersectionCoords[currentEdge->to];
-      float deltaY = destination.y - currentTaxi->position.y;
-      float deltaX = destination.x - currentTaxi->position.x;
-      float distanceToDest = sqrt(deltaX*deltaX + deltaY*deltaY);
+      if (currentTaxi->shortestPath) {
+        DirectedEdge *currentEdge = currentTaxi->shortestPath->edgeList->item;
+        Point destination = taxiState->intersectionCoords[currentEdge->to];
+        float deltaY = destination.y - currentTaxi->position.y;
+        float deltaX = destination.x - currentTaxi->position.x;
+        float distanceToDest = sqrt(deltaX*deltaX + deltaY*deltaY);
 
-      currentTaxi->position.x += SPEED_FACTOR*currentTaxi->velocity.x*dt;
-      currentTaxi->position.y += SPEED_FACTOR*currentTaxi->velocity.y*dt;
-      placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
-                 (int)currentTaxi->position.x, 
-                 (int)currentTaxi->position.y, 20, 20);
+        currentTaxi->position.x += SPEED_FACTOR*currentTaxi->velocity.x*dt;
+        currentTaxi->position.y += SPEED_FACTOR*currentTaxi->velocity.y*dt;
+        placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
+                   (int)currentTaxi->position.x, 
+                   (int)currentTaxi->position.y, 20, 20);
+      }
     }
   }
   else {
@@ -102,31 +104,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
         }
       }
     }
-
-    // TODO(brendan): remove; debugging
-    printf("edges: %d\n", taxiState->roadNetwork.edges);
-    printGraph(&taxiState->roadNetwork);
-
     makeAllShortestPaths(&taxiState->roadNetwork);
-    for (int vertexFrom = 0; 
-         vertexFrom < taxiState->roadNetwork.vertices;
-         ++vertexFrom) {
-      for (int vertexTo = 0; 
-           vertexTo < taxiState->roadNetwork.vertices;
-           ++vertexTo) {
-        ShortestPath *shortestPath = getShortestPath(vertexFrom, vertexTo);
-        if (shortestPath->edgeList) {
-          printf("(%.2f) %d -> ", shortestPath->totalWeight, 
-                                  shortestPath->edgeList->item->from);
-        }
-        for (List<DirectedEdge *> *pathPtr = shortestPath->edgeList;
-             (pathPtr != 0);
-             pathPtr = pathPtr->next) {
-          printf((pathPtr->next != 0) ? "%d -> " : "%d\n", pathPtr->item->to);
-        }
-      }
-    }
-
 
     List<int> *schedules[NUMBER_OF_TAXIS] = {};
     schedules[0] = List<int>::addToList(0, 0);
@@ -138,11 +116,6 @@ void updateAndRender(TaxiState *taxiState, int dt)
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       initTaxiCab(taxiState, &taxiState->taxis[taxiIndex], 
                   schedules[taxiIndex]);
-      printf("position: %.2f %.2f velocity: %.2f %.2f\n", 
-             taxiState->taxis[taxiIndex].position.x, 
-             taxiState->taxis[taxiIndex].position.y, 
-             taxiState->taxis[taxiIndex].velocity.x, 
-             taxiState->taxis[taxiIndex].velocity.y); 
     }
   }
 }
