@@ -8,8 +8,8 @@
 #define global_variable static
 
 struct Point {
-  int x;
-  int y;
+  float x;
+  float y;
 };
 
 struct Rectangle {
@@ -19,12 +19,12 @@ struct Rectangle {
 
 struct Circle {
   Point center;
-  int radius;
+  float radius;
 };
 
 struct Vector {
-  float north;
-  float east;
+  float x;
+  float y;
 };
 
 #define MAX(x,y) ((x) < (y) ? (y) : (x))

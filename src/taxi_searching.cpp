@@ -9,11 +9,8 @@
 #include "helper.h"
 #include "taxi_searching.h"
 #include "edge_weighted_digraph.h"
-#include "dijkstra_sp.h"
 
-#define INTERSECTIONS 64
-
-global_variable List<int> *spAllPairs[INTERSECTIONS][INTERSECTIONS];
+global_variable ShortestPath spAllPairs[INTERSECTIONS][INTERSECTIONS];
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -21,27 +18,28 @@ global_variable List<int> *spAllPairs[INTERSECTIONS][INTERSECTIONS];
 
 // NOTE(brendan): INPUT: source and destination vertices.
 // OUTPUT: pointer to shortest path from that source to the destination vertex
-List<int> *getShortestPath(int source, int dest)
+ShortestPath *getShortestPath(int source, int dest)
 {
-  return spAllPairs[source][dest];
+  return &spAllPairs[source][dest];
+}
+
+// NOTE(brendan): INPUT: edge weighted digraph. OUTPUT: none. UPDATE:none.
+// initializes the spAllPairs global in this module to have all the shortest
+// paths between all pairs in digraph
+void makeAllShortestPaths(EdgeWeightedDigraph *digraph)
+{
+  // TODO(brendan): assert digraph != 0
+  local_persist DijkstraSPTree spTreesArray[INTERSECTIONS];
+  for (int vertexFrom = 0; vertexFrom < digraph->vertices; ++vertexFrom) {
+    makeDijkstraSPTree(&spTreesArray[vertexFrom], digraph, vertexFrom);
+    for (int vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
+       pathTo(&spTreesArray[vertexFrom], &spAllPairs[vertexFrom][vertexTo],
+              vertexTo);
+    }
+  }
 }
 
 // -------------------------------------------------------------------------
 // Local functions
 // ------------------------------------------------------------------------
 
-// NOTE(brendan): INPUT: edge weighted digraph. OUTPUT: none. UPDATE:none.
-// initializes the spAllPairs global in this module to have all the shortest
-// paths between all pairs in digraph
-internal void
-makeAllShortestPaths(EdgeWeightedDigraph *digraph)
-{
-#if 0
-  for (int vertexFrom = 0; vertexFrom < digraph->vertices; ++vertexFrom) {
-    makeSPTree();
-    for (int vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
-      spAllPairs[vertexFrom][vertexTo] = pathTo(spTree[vertexFrom], vertexTo);
-    }
-  }
-#endif
-}

@@ -15,6 +15,7 @@
 // ------------------------------------------------------------------------
 
 internal void relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge);
+internal void freeDirectedEdge(DirectedEdge *edge);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -32,13 +33,13 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
   // NOTE(brendan): N = # of vertices in digraph
   int N = digraph->vertices;
   spTree->distTo = (float *)malloc(N*sizeof(float));
-  spTree->edgeTo = (int *)malloc(N*sizeof(int));
+  spTree->edgeTo = (DirectedEdge **)malloc(N*sizeof(DirectedEdge *));
   if (spTree->distTo && spTree->edgeTo) {
     for (int distToIndex = 0; distToIndex < N; ++distToIndex) {
       spTree->distTo[distToIndex] = INFINITY;
     }
     spTree->distTo[source] = 0.0f;
-    spTree->edgeTo[source] = EDGE_TO_ROOT;
+    spTree->edgeTo[source] = 0;
 
     IndexMinPQ minpq = {};
     // NOTE(brendan): relax vertices in order of distance from source
@@ -46,7 +47,7 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
     pqInsert(&minpq, source, spTree->distTo[source]);
     while (!pqEmpty(&minpq)) {
       int v = pqDelMin(&minpq);
-      List<DirectedEdge *>::traverseList(relax, spTree, &minpq, 
+      List<DirectedEdge *>::traverseList(relax, spTree, &minpq,
                                          digraph->adj[v]);
     }
   }
@@ -58,28 +59,36 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
 
 // NOTE(brendan): INPUT: shortest-path tree, source vertex and dest
 // vertex. OUTPUT: shortest path list of directed edges from that
-// source vertex to the destination vertex.
-List<int> *
-pathTo(DijkstraSPTree *spTree, int dest)
+// source vertex to the destination vertex, output in shortestPath param.
+void
+pathTo(DijkstraSPTree *spTree, ShortestPath *shortestPath, int dest)
 {
   // TODO(brendan): assert input not null
+  List<DirectedEdge *>::traverseList(freeDirectedEdge, shortestPath->edgeList);
+  List<DirectedEdge *>::emptyList(&shortestPath->edgeList);
+  shortestPath->totalWeight = spTree->distTo[dest];
   // NOTE(brendan): check if there IS a path to dest from the root of spTree
-  if (spTree->distTo[dest] >= INFINITY) {
-    return 0;
+  if (spTree->distTo[dest] < INFINITY) {
+    for (DirectedEdge *nextEdge = spTree->edgeTo[dest];
+        nextEdge != 0;
+        nextEdge = spTree->edgeTo[nextEdge->from]) {
+      shortestPath->edgeList = 
+        List<DirectedEdge *>::addToList(nextEdge, shortestPath->edgeList);
+    }
   }
-  // TODO(brendan): assert path != 0; failure point
-  List<int> *path = List<int>::addToList(dest, 0);
-  for (int nextVertex = spTree->edgeTo[dest];
-       nextVertex != EDGE_TO_ROOT;
-       nextVertex = spTree->edgeTo[nextVertex]) {
-    path = List<int>::addToList(nextVertex, path);
-  }
-  return path;
 }
 
 // -------------------------------------------------------------------------
 // Local functions
 // -------------------------------------------------------------------------
+
+// NOTE(brendan): INPUT: edge. OUTPUT: none. frees edge. wrapped to pass
+// to traverseList
+internal void
+freeDirectedEdge(DirectedEdge *edge)
+{
+  free(edge);
+}
 
 // NOTE(brendan): INPUT: shortest-path tree, edge. OUTPUT: none.
 // UPDATE: spTree; decreases the distance to w if going from v->w is cheaper
@@ -93,7 +102,7 @@ relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge)
   int v = edge->from, w = edge->to;
   if (spTree->distTo[w] > spTree->distTo[v] + edge->weight) {
     spTree->distTo[w] = spTree->distTo[v] + edge->weight;
-    spTree->edgeTo[w] = v;
+    spTree->edgeTo[w] = edge;
     if (pqContains(minpq, w)) {
       pqDecreaseWeight(minpq, w, spTree->distTo[w]);
     }

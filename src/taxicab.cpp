@@ -10,6 +10,7 @@
 #include "dijkstra_sp.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
@@ -21,8 +22,11 @@
 internal float speed();
 
 inline void
-placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y, 
+placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
            int width, int height);
+
+internal void
+initTaxiCab(TaxiState *taxiState, Taxi *taxi, List<int> *schedule);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -45,12 +49,33 @@ void updateAndRender(TaxiState *taxiState)
              50, 50);
 
   // NOTE(brendan): updating
+  // TODO(brendan): do actual updating with time step
   if (taxiState->graphInitialized) {
+    for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+      taxiState->taxis[taxiIndex].position.x += 
+        taxiState->taxis[taxiIndex].velocity.x/100.0f;
+      taxiState->taxis[taxiIndex].position.y += 
+        taxiState->taxis[taxiIndex].velocity.y/100.0f;
+      placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
+                 (int)taxiState->taxis[taxiIndex].position.x, 
+                 (int)taxiState->taxis[taxiIndex].position.y, 20, 20);
+    }
   }
   else {
-    makeEdgeWeightedDigraph(&taxiState->roadNetwork, DIMENSION*DIMENSION);
     taxiState->graphInitialized = true;
+    makeEdgeWeightedDigraph(&taxiState->roadNetwork, INTERSECTIONS);
+
+    // NOTE(brendan): place vertices on screen
+    float pitch = 480.0f/DIMENSION;
+    float stride = 640.0f/DIMENSION;
+    for (int y = 0; y < DIMENSION; ++y) {
+      for (int x = 0; x < DIMENSION; ++x) {
+        taxiState->intersectionCoords[x + y*DIMENSION] = {x*stride + stride/2, 
+                                                          y*pitch + pitch/2};
+      }
+    }
     
+    // NOTE(brendan): initialize edges in graph
     for (int row = 0; row < DIMENSION; ++row) {
       for (int col = 0; col < DIMENSION; ++col) {
         if (row > 0) {
@@ -76,13 +101,42 @@ void updateAndRender(TaxiState *taxiState)
     printf("edges: %d\n", taxiState->roadNetwork.edges);
     printGraph(&taxiState->roadNetwork);
 
-    DijkstraSPTree spTree = {};
-    makeDijkstraSPTree(&spTree, &taxiState->roadNetwork, 0);
-    List<int> *testPath = pathTo(&spTree, 63);
-    for (List<int> *pathPtr = testPath;
-         (pathPtr != 0);
-         pathPtr = pathPtr->next) {
-      printf((pathPtr->next != 0) ? "%d -> " : "%d\n", pathPtr->item);
+    makeAllShortestPaths(&taxiState->roadNetwork);
+    for (int vertexFrom = 0; 
+         vertexFrom < taxiState->roadNetwork.vertices;
+         ++vertexFrom) {
+      for (int vertexTo = 0; 
+           vertexTo < taxiState->roadNetwork.vertices;
+           ++vertexTo) {
+        ShortestPath *shortestPath = getShortestPath(vertexFrom, vertexTo);
+        if (shortestPath->edgeList) {
+          printf("(%.2f) %d -> ", shortestPath->totalWeight, 
+                                  shortestPath->edgeList->item->from);
+        }
+        for (List<DirectedEdge *> *pathPtr = shortestPath->edgeList;
+             (pathPtr != 0);
+             pathPtr = pathPtr->next) {
+          printf((pathPtr->next != 0) ? "%d -> " : "%d\n", pathPtr->item->to);
+        }
+      }
+    }
+
+
+    List<int> *schedules[NUMBER_OF_TAXIS] = {};
+    schedules[0] = List<int>::addToList(0, 0);
+    schedules[0] = List<int>::addToList(23, schedules[0]);
+    schedules[0] = List<int>::addToList(63, schedules[0]);
+    schedules[0] = List<int>::addToList(0, schedules[0]);
+
+    // NOTE(brendan): init taxis
+    for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+      initTaxiCab(taxiState, &taxiState->taxis[taxiIndex], 
+                  schedules[taxiIndex]);
+      printf("position: %.2f %.2f velocity: %.2f %.2f\n", 
+             taxiState->taxis[taxiIndex].position.x, 
+             taxiState->taxis[taxiIndex].position.y, 
+             taxiState->taxis[taxiIndex].velocity.x, 
+             taxiState->taxis[taxiIndex].velocity.y); 
     }
   }
 }
@@ -114,4 +168,39 @@ placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
   destRect.w = width;
   destRect.h = height;
 	SDL_RenderCopy(renderer, image, NULL, &destRect ); 
+}
+
+// INPUT: taxi-state, taxi, schedule. OUTPUT: none. UPDATE: the taxi is
+// updated; its shortestPath is set based on its schedule, and its
+// position and velocity are set based on its shortestPath
+internal void
+initTaxiCab(TaxiState *taxiState, Taxi *taxi, List<int> *schedule)
+{
+  // TODO(brendan): assert taxi != 0, 
+  taxi->numberOfPassengers = 0;
+  taxi->schedule = schedule;
+  if (schedule) {
+    taxi->shortestPath = getShortestPath(schedule->item, schedule->next->item);
+    taxi->position.x = taxiState->intersectionCoords[schedule->item].x;
+    taxi->position.y = taxiState->intersectionCoords[schedule->item].y;
+    if (schedule->next) {
+      DirectedEdge *currentEdge = taxi->shortestPath->edgeList->item;
+      float speed = currentEdge->weight;
+      float deltaX = taxiState->intersectionCoords[currentEdge->to].x -
+                     taxiState->intersectionCoords[currentEdge->from].x;
+      float deltaY = taxiState->intersectionCoords[currentEdge->to].y -
+                     taxiState->intersectionCoords[currentEdge->from].y;
+      float distance = sqrt(deltaX*deltaX + deltaY*deltaY);
+      taxi->velocity.x = speed*deltaX/distance;
+      taxi->velocity.y = speed*deltaY/distance;
+    }
+    else {
+      taxi->velocity.x = 0.0f;
+      taxi->velocity.y = 0.0f;
+    }
+  }
+  else {
+    // TODO(brendan): init position?
+    *taxi = {};
+  }
 }

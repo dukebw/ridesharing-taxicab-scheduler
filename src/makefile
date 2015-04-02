@@ -7,7 +7,7 @@ LDFLAGS=$(SDL_LDFLAGS)
 CC=g++
 
 SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp\
-				dijkstra_sp.cpp index_min_pq.cpp
+				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=taxicab_scheduler
 # Build directory
@@ -39,7 +39,8 @@ spotless:
 	rm -f *.o *~ .*~ $(BUILD)$(EXECUTABLE)
 
 sdl2_taxicab.o: helper.h taxicab.h
-taxicab.o: taxicab.h edge_weighted_digraph.h dijkstra_sp.h
+taxicab.o: taxicab.h edge_weighted_digraph.h dijkstra_sp.h taxi_searching.h
 edge_weighted_digraph.o: edge_weighted_digraph.h helper.h linked_list.h
 dijkstra_sp.o: edge_weighted_digraph.h index_min_pq.h linked_list.h helper.h
 index_min_pq.o: helper.h
+taxi_searching.o: linked_list.h dijkstra_sp.h helper.h edge_weighted_digraph.h

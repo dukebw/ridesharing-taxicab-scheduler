@@ -9,7 +9,12 @@
 
 struct DijkstraSPTree {
   float *distTo;
-  int *edgeTo;
+  DirectedEdge **edgeTo;
+};
+
+struct ShortestPath {
+  float totalWeight;
+  List<DirectedEdge *> *edgeList;
 };
 
 // NOTE(brendan): INPUT: edge-weighted digraph, source vertex
@@ -21,7 +26,7 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
 // NOTE(brendan): INPUT: edge weighted digraph, source vertex and dest
 // vertex. OUTPUT: shortest path list of directed edges from that
 // source vertex to the destination vertex.
-List<int> *
-pathTo(DijkstraSPTree *spTree, int dest);
+void
+pathTo(DijkstraSPTree *spTree, ShortestPath *shortestPath, int dest);
 
 #endif /* DIJKSTRA_SP_H */
