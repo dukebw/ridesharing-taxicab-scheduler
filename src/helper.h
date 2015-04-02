@@ -22,6 +22,11 @@ struct Circle {
   int radius;
 };
 
+struct Vector {
+  float north;
+  float east;
+};
+
 #define MAX(x,y) ((x) < (y) ? (y) : (x))
 
 #endif /* HELPER_H */

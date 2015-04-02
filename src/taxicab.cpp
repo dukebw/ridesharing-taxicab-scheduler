@@ -7,10 +7,9 @@
    ======================================================================== */
 
 #include "taxicab.h"
+#include "dijkstra_sp.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "dijkstra_sp.h"
-#include "helper.h"
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
@@ -91,6 +90,7 @@ void updateAndRender(TaxiState *taxiState)
 // -------------------------------------------------------------------------
 // Local functions
 // ------------------------------------------------------------------------
+
 internal float speed() 
 {
   local_persist int minSpeed = 40;
