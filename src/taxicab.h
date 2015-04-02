@@ -36,6 +36,6 @@ struct TaxiState {
 
 // TODO(brendan): put in update_and_render to avoid cycles in uses diagram
 // NOTE(brendan): does updating and rendering
-void updateAndRender(TaxiState *taxiState);
+void updateAndRender(TaxiState *taxiState, int dt);
 
 #endif /* TAXICAB_H */

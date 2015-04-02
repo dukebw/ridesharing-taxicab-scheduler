@@ -14,6 +14,9 @@ struct DijkstraSPTree {
 
 struct ShortestPath {
   float totalWeight;
+  // NOTE(brendan): ShortestPath is a list of pointers; does not
+  // make copies (i.e. side-effects) the pointers point to memory allocated
+  // in the DijkstraSPTree array in the taxi_searching module
   List<DirectedEdge *> *edgeList;
 };
 

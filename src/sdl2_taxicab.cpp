@@ -184,10 +184,13 @@ int main(int argc, char *argv[])
 
     srand((unsigned)time(0));
 
+    int previousTime = SDL_GetTicks(), elapsedTime = 0;
     // NOTE(brendan): while application is running
     while (globalRunning) {
+      elapsedTime = SDL_GetTicks() - previousTime;
+      previousTime = SDL_GetTicks();
       globalRunning = sdl2HandleEvents();
-      updateAndRender(&taxiState);
+      updateAndRender(&taxiState, elapsedTime);
       sdl2Render(&taxiState);
     }
   }

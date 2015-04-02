@@ -14,6 +14,7 @@
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
+#define SPEED_FACTOR 0.0006f
 
 // -------------------------------------------------------------------------
 // Forward declarations
@@ -33,7 +34,7 @@ initTaxiCab(TaxiState *taxiState, Taxi *taxi, List<int> *schedule);
 // ------------------------------------------------------------------------
 
 // NOTE(brendan): does updating and rendering for applications
-void updateAndRender(TaxiState *taxiState) 
+void updateAndRender(TaxiState *taxiState, int dt) 
 {
   // NOTE(brendan): Clear screen
   // TODO(brendan): need to set draw colour here?
@@ -52,13 +53,18 @@ void updateAndRender(TaxiState *taxiState)
   // TODO(brendan): do actual updating with time step
   if (taxiState->graphInitialized) {
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
-      taxiState->taxis[taxiIndex].position.x += 
-        taxiState->taxis[taxiIndex].velocity.x/100.0f;
-      taxiState->taxis[taxiIndex].position.y += 
-        taxiState->taxis[taxiIndex].velocity.y/100.0f;
+      Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
+      DirectedEdge *currentEdge = currentTaxi->shortestPath->edgeList->item;
+      Point destination = taxiState->intersectionCoords[currentEdge->to];
+      float deltaY = destination.y - currentTaxi->position.y;
+      float deltaX = destination.x - currentTaxi->position.x;
+      float distanceToDest = sqrt(deltaX*deltaX + deltaY*deltaY);
+
+      currentTaxi->position.x += SPEED_FACTOR*currentTaxi->velocity.x*dt;
+      currentTaxi->position.y += SPEED_FACTOR*currentTaxi->velocity.y*dt;
       placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
-                 (int)taxiState->taxis[taxiIndex].position.x, 
-                 (int)taxiState->taxis[taxiIndex].position.y, 20, 20);
+                 (int)currentTaxi->position.x, 
+                 (int)currentTaxi->position.y, 20, 20);
     }
   }
   else {
