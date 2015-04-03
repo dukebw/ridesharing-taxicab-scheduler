@@ -47,12 +47,11 @@ void updateAndRender(TaxiState *taxiState, int dt)
                  taxiState->textures[BACKGROUND_TEXTURE], 0, 0);
 
   // NOTE(brendan): updating
-  // TODO(brendan): do actual updating with time step
   if (taxiState->graphInitialized) {
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
       if (currentTaxi->shortestPath) {
-        DirectedEdge *currentEdge = currentTaxi->shortestPath->edgeList->item;
+        DirectedEdge *currentEdge = currentTaxi->shortestPath->item;
         Point destination = taxiState->intersectionCoords[currentEdge->to];
         float deltaY = destination.y - currentTaxi->position.y;
         float deltaX = destination.x - currentTaxi->position.x;
@@ -64,8 +63,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
         float timeToDestY = (vy != 0.0f) ? deltaY/vy : 0.0f;
         if (timeToDestX < dt && timeToDestY < dt) {
           // TODO(brendan): switch to next vertex in shortestPath
-          currentTaxi->shortestPath->edgeList = 
-            currentTaxi->shortestPath->edgeList->next;
+          currentTaxi->shortestPath = currentTaxi->shortestPath->next;
           setTaxiVelocity(currentTaxi, taxiState);
         }
 
@@ -168,8 +166,8 @@ internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
 {
   // TODO(brendan): assert inputs != 0
-  if (taxi->shortestPath->edgeList) {
-    DirectedEdge *currentEdge = taxi->shortestPath->edgeList->item;
+  if (taxi->shortestPath) {
+    DirectedEdge *currentEdge = taxi->shortestPath->item;
     float speed = currentEdge->weight;
     float deltaX = taxiState->intersectionCoords[currentEdge->to].x -
       taxiState->intersectionCoords[currentEdge->from].x;
@@ -180,7 +178,6 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
     taxi->velocity.y = SPEED_FACTOR*speed*deltaY/distance;
   }
   else {
-    taxi->shortestPath = 0;
     taxi->velocity.x = 0.0f;
     taxi->velocity.y = 0.0f;
   }
@@ -200,7 +197,7 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, List<int> *schedule)
     taxi->position.y = taxiState->intersectionCoords[schedule->item].y;
     if (schedule->next) {
       taxi->shortestPath = getShortestPath(schedule->item, 
-                                           schedule->next->item);
+                                           schedule->next->item)->edgeList;
       setTaxiVelocity(taxi, taxiState);
     }
     else {

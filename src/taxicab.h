@@ -21,7 +21,7 @@ struct Taxi {
   // NOTE(brendan): for schedule-updating
   List<int> *schedule;
   // NOTE(brendan): pointer to shortest path that the taxi is on
-  ShortestPath *shortestPath;
+  List<DirectedEdge *> *shortestPath;
 };
 
 // NOTE(brendan): struct containing all the state for the application
