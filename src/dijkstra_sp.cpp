@@ -15,7 +15,6 @@
 // ------------------------------------------------------------------------
 
 internal void relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge);
-internal void freeDirectedEdge(DirectedEdge *edge);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -81,14 +80,6 @@ pathTo(DijkstraSPTree *spTree, ShortestPath *shortestPath, int dest)
 // -------------------------------------------------------------------------
 // Local functions
 // -------------------------------------------------------------------------
-
-// NOTE(brendan): INPUT: edge. OUTPUT: none. frees edge. wrapped to pass
-// to traverseList
-internal void
-freeDirectedEdge(DirectedEdge *edge)
-{
-  free(edge);
-}
 
 // NOTE(brendan): INPUT: shortest-path tree, edge. OUTPUT: none.
 // UPDATE: spTree; decreases the distance to w if going from v->w is cheaper

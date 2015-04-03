@@ -151,12 +151,6 @@ sdl2HandleEvents()
   return true;
 }
 
-internal void
-sdl2Render(TaxiState *taxiState) 
-{
-  SDL_RenderPresent(taxiState->renderer);
-}
-
 // NOTE(brendan): free resources and quit SDL
 void sdl2Close() 
 {
@@ -191,7 +185,6 @@ int main(int argc, char *argv[])
       previousTime = SDL_GetTicks();
       globalRunning = sdl2HandleEvents();
       updateAndRender(&taxiState, elapsedTime);
-      sdl2Render(&taxiState);
     }
   }
 

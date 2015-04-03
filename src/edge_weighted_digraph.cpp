@@ -69,7 +69,7 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices)
   destroyAdjacencyLists(digraph);
   digraph->vertices = vertices;
   digraph->adj = 
-    (List<DirectedEdge *> **)malloc(vertices*sizeof(List<DirectedEdge> *));
+    (List<DirectedEdge *> **)malloc(vertices*sizeof(List<DirectedEdge *> *));
   // NOTE(brendan): every malloc introduces a failure point
   if (digraph->adj) {
     for (int vertexIndex = 0;
@@ -82,6 +82,14 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices)
     // TODO(brendan): logging
     printf("Could not allocate adjacency lists\n");
   }
+}
+
+
+// NOTE(brendan): INPUT: edge. OUTPUT: none. frees edge. wrapped to pass
+// to traverseList
+void freeDirectedEdge(DirectedEdge *edge) 
+{ 
+  free(edge); 
 }
 
 // -------------------------------------------------------------------------
@@ -97,6 +105,8 @@ destroyAdjacencyLists(EdgeWeightedDigraph *digraph)
     for (int vertexIndex = 0; 
          vertexIndex < digraph->vertices; 
          ++vertexIndex) {
+      List<DirectedEdge *>::traverseList(freeDirectedEdge, 
+                                         digraph->adj[vertexIndex]);
       List<DirectedEdge *>::emptyList(&digraph->adj[vertexIndex]);
       digraph->adj[vertexIndex] = 0;
     }

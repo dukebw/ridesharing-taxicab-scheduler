@@ -26,4 +26,8 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices);
 // NOTE(brendan): add the vertex (from, to) to the digraph
 void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight);
 
+// NOTE(brendan): INPUT: edge. OUTPUT: none. frees edge. wrapped to pass
+// to traverseList
+void freeDirectedEdge(DirectedEdge *edge);
+
 #endif /* EDGE_WEIGHTED_DIGRAPH_H */
