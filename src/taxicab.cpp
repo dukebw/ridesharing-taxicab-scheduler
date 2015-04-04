@@ -15,6 +15,7 @@
 // TODO(brendan): testing; remove
 #define DIMENSION 8
 #define SPEED_FACTOR 0.0012f
+#define TAXI_QUERY_INTERVAL 2500
 
 // -------------------------------------------------------------------------
 // Forward declarations
@@ -22,9 +23,10 @@
 
 internal float speed();
 
-inline void
-placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
-           int width, int height);
+inline int randomVertex(EdgeWeightedDigraph *graph);
+
+internal int
+getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState);
 
 internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
@@ -32,6 +34,10 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
 internal void
 initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
             Point position, List<int> *schedule);
+
+inline void
+placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
+           int width, int height);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -49,6 +55,37 @@ void updateAndRender(TaxiState *taxiState, int dt)
 
   // NOTE(brendan): updating
   if (taxiState->graphInitialized) {
+    // NOTE(brendan): deal with queries; make a new query every queryInterval
+    taxiState->timeSinceLastQuery += dt;
+    if (taxiState->timeSinceLastQuery > taxiState->queryInterval) {
+      taxiState->timeSinceLastQuery = 0;
+      int pickupVertex = randomVertex(&taxiState->roadNetwork);
+      int dropoffVertex = randomVertex(&taxiState->roadNetwork);
+      // TODO(brendan): remove; testing
+      printf("pickup: %d dropoff %d\n", pickupVertex, dropoffVertex);
+
+      Taxi *taxiToMeetQuery = 0;
+      float weightAddedByQuery = 0.0f;
+      for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+        Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
+        int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
+        if (currentTaxi->schedule) {
+          if (currentTaxi->numberOfPassengers < taxiState->maxPassengerCount) {
+          }
+        }
+        else {
+          ShortestPath *pathToQuery = getShortestPath(currentTaxiVertex, 
+              pickupVertex);
+          currentTaxi->schedule = 
+            List<int>::addToList(pickupVertex, currentTaxi->schedule);
+          currentTaxi->schedule = 
+            List<int>::addToList(dropoffVertex, currentTaxi->schedule);
+          break;
+        }
+      }
+    }
+
+    // NOTE(brendan): update taxi positions, velocities, schedules and paths
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
       if (currentTaxi->shortestPath) {
@@ -85,7 +122,11 @@ void updateAndRender(TaxiState *taxiState, int dt)
     }
   }
   else {
+    // NOTE(brendan): do initialization of graph and taxiState
     taxiState->graphInitialized = true;
+    taxiState->queryInterval = TAXI_QUERY_INTERVAL;
+    taxiState->timeSinceLastQuery = 0;
+    taxiState->maxPassengerCount = 3;
     makeEdgeWeightedDigraph(&taxiState->roadNetwork, INTERSECTIONS);
 
     // NOTE(brendan): place vertices on screen
@@ -121,18 +162,10 @@ void updateAndRender(TaxiState *taxiState, int dt)
     }
     makeAllShortestPaths(&taxiState->roadNetwork);
 
-    // TODO(brendan): testing; fix up
-    // NOTE(brendan): creating testing schedules
-    List<int> *schedules[NUMBER_OF_TAXIS] = {};
-    schedules[0] = List<int>::addToList(0, 0);
-    schedules[0] = List<int>::addToList(23, schedules[0]);
-    schedules[0] = List<int>::addToList(63, schedules[0]);
-    schedules[0] = List<int>::addToList(0, schedules[0]);
-
     // NOTE(brendan): init taxis
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, 
-                  {stride/2.0f, pitch/2.0f}, schedules[taxiIndex]);
+                  {stride/2.0f, pitch/2.0f}, 0);
     }
   }
 
@@ -144,29 +177,18 @@ void updateAndRender(TaxiState *taxiState, int dt)
 // Local functions
 // ------------------------------------------------------------------------
 
+inline int randomVertex(EdgeWeightedDigraph *graph)
+{
+  return (int)(((double)rand()/((double)RAND_MAX + 1.0))*
+               (double)graph->vertices);
+}
+
 internal float speed() 
 {
   local_persist int minSpeed = 40;
   local_persist int maxSpeed = 100;
   return (float)((double)rand()/(unsigned)(RAND_MAX)*
       (maxSpeed - minSpeed) + minSpeed);
-}
-
-
-// -------------------------------------------------------------------------
-// SDL functions
-// ------------------------------------------------------------------------
-// NOTE(brendan): places the image at (x, y)
-inline void
-placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y, 
-           int width, int height) 
-{
-	SDL_Rect destRect;
-  destRect.x = x;
-  destRect.y = y;
-  destRect.w = width;
-  destRect.h = height;
-	SDL_RenderCopy(renderer, image, NULL, &destRect ); 
 }
 
 // NOTE(brendan): INPUT: taxi, taxistate. OUTPUT: none. UPDATE: taxi; taxi's
@@ -200,6 +222,18 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
   }
 }
 
+// INPUT: taxi, taxi-state. OUTPUT: the vertex that that taxi is currently
+// at, according to its x and y position
+internal int
+getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
+{
+  // NOTE(brendan): map co-ords to vertex
+  float pitch = (float)taxiState->screenHeight/DIMENSION;
+  float stride = (float)taxiState->screenWidth/DIMENSION;
+  return (int)((taxi->position.x - stride/2.0f)/stride + 
+               ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
+}
+
 // INPUT: taxi-state, taxi, schedule. OUTPUT: none. UPDATE: the taxi is
 // updated; its shortestPath is set based on its schedule, and its
 // position and velocity are set based on its shortestPath
@@ -212,12 +246,7 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
   taxi->position = position;
   taxi->schedule = schedule;
   if (schedule) {
-    // NOTE(brendan): map co-ords to vertex
-    float pitch = (float)taxiState->screenHeight/DIMENSION;
-    float stride = (float)taxiState->screenWidth/DIMENSION;
-    int taxiCurrentVertex = 
-      (int)((taxi->position.x - stride/2.0f)/stride + 
-            ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
+    int taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
     taxi->shortestPath = getShortestPath(taxiCurrentVertex, 
                                          schedule->item)->edgeList;
     setTaxiVelocity(taxi, taxiState);
@@ -227,4 +256,20 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
     taxi->velocity.x = 0.0f;
     taxi->velocity.y = 0.0f;
   }
+}
+
+// -------------------------------------------------------------------------
+// SDL functions
+// ------------------------------------------------------------------------
+// NOTE(brendan): places the image at (x, y)
+inline void
+placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y, 
+           int width, int height) 
+{
+	SDL_Rect destRect;
+  destRect.x = x;
+  destRect.y = y;
+  destRect.w = width;
+  destRect.h = height;
+	SDL_RenderCopy(renderer, image, NULL, &destRect ); 
 }

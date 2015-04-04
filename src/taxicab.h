@@ -29,6 +29,9 @@ struct TaxiState {
   bool graphInitialized;
   int screenWidth;
   int screenHeight;
+  int maxPassengerCount;
+  int timeSinceLastQuery;
+  int queryInterval;
   SDL_Renderer *renderer;
   SDL_Texture *textures[NUMBER_OF_IMAGES];
   EdgeWeightedDigraph roadNetwork;
