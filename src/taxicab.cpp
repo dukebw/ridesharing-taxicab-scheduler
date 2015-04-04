@@ -15,7 +15,7 @@
 // TODO(brendan): testing; remove
 #define DIMENSION 8
 #define SPEED_FACTOR 0.0012f
-#define TAXI_QUERY_INTERVAL 2500
+#define TAXI_QUERY_INTERVAL 5000
 
 // -------------------------------------------------------------------------
 // Forward declarations
@@ -65,7 +65,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
       printf("pickup: %d dropoff %d\n", pickupVertex, dropoffVertex);
 
       Taxi *taxiToMeetQuery = 0;
-      float weightAddedByQuery = 0.0f;
+      float weightAddedByQuery = INFINITY;
       for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
         Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
         int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
@@ -74,14 +74,22 @@ void updateAndRender(TaxiState *taxiState, int dt)
           }
         }
         else {
-          ShortestPath *pathToQuery = getShortestPath(currentTaxiVertex, 
-              pickupVertex);
-          currentTaxi->schedule = 
-            List<int>::addToList(pickupVertex, currentTaxi->schedule);
-          currentTaxi->schedule = 
-            List<int>::addToList(dropoffVertex, currentTaxi->schedule);
-          break;
+          float taxiAddedWeight = 
+            getShortestPath(currentTaxiVertex, pickupVertex)->totalWeight;
+          taxiAddedWeight +=
+            getShortestPath(pickupVertex, dropoffVertex)->totalWeight;
+          if (taxiAddedWeight < weightAddedByQuery) {
+            taxiToMeetQuery = currentTaxi;
+            weightAddedByQuery = taxiAddedWeight;
+          }
         }
+      }
+      // NOTE(brendan): found a taxi that is capable of meeting the query
+      if (taxiToMeetQuery) {
+        taxiToMeetQuery->schedule = 
+          List<int>::addToList(dropoffVertex, taxiToMeetQuery->schedule);
+        taxiToMeetQuery->schedule = 
+          List<int>::addToList(pickupVertex, taxiToMeetQuery->schedule);
       }
     }
 
@@ -114,7 +122,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
       // and discard last one
       else if (currentTaxi->schedule) {
         initTaxiCab(currentTaxi, taxiState, 0, currentTaxi->position,
-                    List<int>::removeHead(currentTaxi->schedule));
+                    currentTaxi->schedule);
+        currentTaxi->schedule = List<int>::removeHead(currentTaxi->schedule);
       }
       placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
                  (int)currentTaxi->position.x, 
@@ -252,9 +261,9 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
     setTaxiVelocity(taxi, taxiState);
   }
   else {
-    // TODO(brendan): init position?
     taxi->velocity.x = 0.0f;
     taxi->velocity.y = 0.0f;
+    taxi->shortestPath = 0;
   }
 }
 
