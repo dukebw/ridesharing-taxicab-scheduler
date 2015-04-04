@@ -27,6 +27,8 @@ struct Taxi {
 // NOTE(brendan): struct containing all the state for the application
 struct TaxiState {
   bool graphInitialized;
+  int screenWidth;
+  int screenHeight;
   SDL_Renderer *renderer;
   SDL_Texture *textures[NUMBER_OF_IMAGES];
   EdgeWeightedDigraph roadNetwork;

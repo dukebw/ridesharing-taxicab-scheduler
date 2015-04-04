@@ -23,6 +23,10 @@ public:
   static List<T> *
   addToList(T newitem, List<T> *list);
 
+  // NOTE(brendan): INPUT: list. OUTPUT: new list. removes head of list
+  static List<T> *
+  removeHead(List<T> *list);
+
   // NOTE(brendan): delete the first occurrence of item T; returns the list
   static List<T> *
   deleteFromList(T toDeleteItem, List<T> *list);
@@ -58,6 +62,18 @@ List<T>::addToList(T newItem, List<T> *list)
   resultList->item = newItem;
   resultList->next = list;
   return resultList;
+}
+
+// NOTE(brendan): INPUT: list. OUTPUT: new list. removes head of list
+template<typename T> List<T> *
+List<T>::removeHead(List<T> *list) 
+{
+  if (list) {
+    List<T> *toFreeList = list;
+    list = list->next;
+    free(toFreeList);
+  }
+  return list;
 }
 
 template<typename T> void 

@@ -30,7 +30,8 @@ internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
 
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, List<int> *schedule);
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
+            Point position, List<int> *schedule);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -61,14 +62,22 @@ void updateAndRender(TaxiState *taxiState, int dt)
         float vx = currentTaxi->velocity.x;
         float timeToDestX = (vx != 0.0f) ? deltaX/vx : 0.0f;
         float timeToDestY = (vy != 0.0f) ? deltaY/vy : 0.0f;
-        if (timeToDestX < dt && timeToDestY < dt) {
-          // TODO(brendan): switch to next vertex in shortestPath
+        if ((timeToDestX < dt) && (timeToDestY < dt)) {
+          // NOTE(brendan): set taxi's position to its destination
+          currentTaxi->position.x = destination.x;
+          currentTaxi->position.y = destination.y;
           currentTaxi->shortestPath = currentTaxi->shortestPath->next;
           setTaxiVelocity(currentTaxi, taxiState);
         }
 
         currentTaxi->position.x += currentTaxi->velocity.x*dt;
         currentTaxi->position.y += currentTaxi->velocity.y*dt;
+      }
+      // NOTE(brendan): get the next dropoff or pickup spot in the schedule
+      // and discard last one
+      else if (currentTaxi->schedule) {
+        initTaxiCab(currentTaxi, taxiState, 0, currentTaxi->position,
+                    List<int>::removeHead(currentTaxi->schedule));
       }
       placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
                  (int)currentTaxi->position.x, 
@@ -80,8 +89,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
     makeEdgeWeightedDigraph(&taxiState->roadNetwork, INTERSECTIONS);
 
     // NOTE(brendan): place vertices on screen
-    float pitch = 480.0f/DIMENSION;
-    float stride = 640.0f/DIMENSION;
+    float pitch = (float)taxiState->screenHeight/DIMENSION;
+    float stride = (float)taxiState->screenWidth/DIMENSION;
     for (int y = 0; y < DIMENSION; ++y) {
       for (int x = 0; x < DIMENSION; ++x) {
         taxiState->intersectionCoords[x + y*DIMENSION] = {x*stride + stride/2, 
@@ -112,6 +121,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
     }
     makeAllShortestPaths(&taxiState->roadNetwork);
 
+    // TODO(brendan): testing; fix up
+    // NOTE(brendan): creating testing schedules
     List<int> *schedules[NUMBER_OF_TAXIS] = {};
     schedules[0] = List<int>::addToList(0, 0);
     schedules[0] = List<int>::addToList(23, schedules[0]);
@@ -120,8 +131,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
 
     // NOTE(brendan): init taxis
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
-      initTaxiCab(&taxiState->taxis[taxiIndex], taxiState,
-                  schedules[taxiIndex]);
+      initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, 
+                  {stride/2.0f, pitch/2.0f}, schedules[taxiIndex]);
     }
   }
 
@@ -170,12 +181,18 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
     DirectedEdge *currentEdge = taxi->shortestPath->item;
     float speed = currentEdge->weight;
     float deltaX = taxiState->intersectionCoords[currentEdge->to].x -
-      taxiState->intersectionCoords[currentEdge->from].x;
+                   taxi->position.x;
     float deltaY = taxiState->intersectionCoords[currentEdge->to].y -
-      taxiState->intersectionCoords[currentEdge->from].y;
+                   taxi->position.y;
     float distance = sqrt(deltaX*deltaX + deltaY*deltaY);
-    taxi->velocity.x = SPEED_FACTOR*speed*deltaX/distance;
-    taxi->velocity.y = SPEED_FACTOR*speed*deltaY/distance;
+    if (distance) {
+      taxi->velocity.x = SPEED_FACTOR*speed*deltaX/distance;
+      taxi->velocity.y = SPEED_FACTOR*speed*deltaY/distance;
+    }
+    else {
+      taxi->velocity.x = 0.0f;
+      taxi->velocity.y = 0.0f;
+    }
   }
   else {
     taxi->velocity.x = 0.0f;
@@ -187,26 +204,27 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
 // updated; its shortestPath is set based on its schedule, and its
 // position and velocity are set based on its shortestPath
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, List<int> *schedule)
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
+            Point position, List<int> *schedule)
 {
   // TODO(brendan): assert taxi != 0, 
-  taxi->numberOfPassengers = 0;
+  taxi->numberOfPassengers = numberOfPassengers;
+  taxi->position = position;
   taxi->schedule = schedule;
   if (schedule) {
-    taxi->position.x = taxiState->intersectionCoords[schedule->item].x;
-    taxi->position.y = taxiState->intersectionCoords[schedule->item].y;
-    if (schedule->next) {
-      taxi->shortestPath = getShortestPath(schedule->item, 
-                                           schedule->next->item)->edgeList;
-      setTaxiVelocity(taxi, taxiState);
-    }
-    else {
-      taxi->velocity.x = 0.0f;
-      taxi->velocity.y = 0.0f;
-    }
+    // NOTE(brendan): map co-ords to vertex
+    float pitch = (float)taxiState->screenHeight/DIMENSION;
+    float stride = (float)taxiState->screenWidth/DIMENSION;
+    int taxiCurrentVertex = 
+      (int)((taxi->position.x - stride/2.0f)/stride + 
+            ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
+    taxi->shortestPath = getShortestPath(taxiCurrentVertex, 
+                                         schedule->item)->edgeList;
+    setTaxiVelocity(taxi, taxiState);
   }
   else {
     // TODO(brendan): init position?
-    *taxi = {};
+    taxi->velocity.x = 0.0f;
+    taxi->velocity.y = 0.0f;
   }
 }

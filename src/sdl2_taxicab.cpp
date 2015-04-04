@@ -165,6 +165,8 @@ int main(int argc, char *argv[])
 {
   // NOTE(brendan): state (model) of the taxis on the road network
   TaxiState taxiState = {};
+  taxiState.screenWidth = SCREEN_WIDTH;
+  taxiState.screenHeight = SCREEN_HEIGHT;
 
   if (!sdl2Init(&taxiState.renderer)) {
     printf("Failed to initialize!\n");
