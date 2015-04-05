@@ -19,6 +19,8 @@ struct Taxi {
   Point position;
   Vector velocity;
   // NOTE(brendan): for schedule-updating
+  // NOTE(brendan): allocate and free schedules; shortestPaths live
+  // statically in taxi_searching
   List<int> *schedule;
   // NOTE(brendan): pointer to shortest path that the taxi is on
   List<DirectedEdge *> *shortestPath;
