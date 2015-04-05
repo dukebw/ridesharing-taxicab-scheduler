@@ -23,6 +23,15 @@ public:
   static List<T> *
   addToList(T newitem, List<T> *list);
 
+  // NOTE(brendan): INPUT: list, item index. OUTPUT: pointer to updated
+  // list. UPDATE: list; item is inserted such that it is now node 0
+  static List<T> *
+  insertAt(List<T> *list, T newitem, int index);
+
+  // NOTE(brendan): INPUT: list, index. OUTPUT: item at index
+  static bool
+  itemAt(T *outputItem, List<T> *list, int index);
+
   // NOTE(brendan): INPUT: list. OUTPUT: new list. removes head of list
   static List<T> *
   removeHead(List<T> *list);
@@ -62,6 +71,44 @@ List<T>::addToList(T newItem, List<T> *list)
   resultList->item = newItem;
   resultList->next = list;
   return resultList;
+}
+
+// NOTE(brendan): INPUT: list, item index. OUTPUT: pointer to updated
+// list. UPDATE: list; item is inserted such that it is now node 0
+// If index is > the end of the list just inserts at the end
+// if index is < 0 treats it as if index == 0
+template<typename T> List<T> *
+List<T>::insertAt(List<T> *list, T newItem, int index) 
+{
+  List<T> *resultList = list;
+  List<T> *prev = 0;
+  for (int i = 0; list && (i < index); list = list->next, ++i) {
+    prev = list;
+  }
+  if (prev) {
+    prev->next = List<T>::addToList(newItem, list);
+  }
+  else {
+    resultList = List<T>::addToList(newItem, list);
+  }
+  return resultList;
+}
+
+// NOTE(brendan): INPUT: outputItem, list, index. OUTPUT: false if not found
+// true if found. UPDATE: outputItem
+template<typename T> bool
+List<T>::itemAt(T *outputItem, List<T> *list, int index)
+{
+  // TODO(brendan): assert outputItem != 0
+  if (index >= 0) {
+    for (int i = 0; list; list = list->next, ++i) {
+      if (i == index) {
+        *outputItem = list->item;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // NOTE(brendan): INPUT: list. OUTPUT: new list. removes head of list

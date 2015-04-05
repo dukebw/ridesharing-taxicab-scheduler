@@ -16,12 +16,25 @@
 #define DIMENSION 8
 #define SPEED_FACTOR 0.0012f
 #define TAXI_QUERY_INTERVAL 3000
+#define NO_PATH -1
 
 // -------------------------------------------------------------------------
 // Forward declarations
 // ------------------------------------------------------------------------
 
 internal void debugPrintList(List<int> *list);
+
+internal void
+updateInsertionPoint(InsertionPoint *insertPoint, List<int> *schedule,
+                     int midPoint);
+
+internal void
+setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi, 
+                InsertionPoint *pickup, InsertionPoint *dropoff);
+
+internal void
+initInsertionPoint(InsertionPoint *insertionPoint, int start, int end,
+                   int index, float weight);
 
 internal float speed();
 
@@ -72,83 +85,57 @@ void updateAndRender(TaxiState *taxiState, int dt)
       // NOTE(brendan): we iterate through the taxi's schedule and try to find
       // the cheapest of all combinations for insert points for the pickup and
       // dropoff of the query
-      Taxi *taxiToMeetQuery = 0;
       Taxi *currentTaxi = 0;
-      List<int> **pickupInsertPoint = 0;
-      List<int> **dropoffInsertPoint = 0;
-      float weightAddedByQuery = INFINITY;
+      TaxiQuery minTaxiQuery = {};
+      minTaxiQuery.weight = INFINITY;
+      InsertionPoint pickup = {};
+      InsertionPoint dropoff = {};
       for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
         currentTaxi = &taxiState->taxis[taxiIndex];
         int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
-        if (currentTaxi->schedule) {
-          if (currentTaxi->numberOfPassengers < taxiState->maxPassengerCount) {
-            List<int> **pPickupStart = 0;
-            int pickupStart = currentTaxiVertex;
-            int pickupEnd = currentTaxi->schedule->item;
-            List<int> **pDropoffStart = &currentTaxi->schedule;
-            int dropoffStart = pickupVertex;
-            int dropoffEnd = currentTaxi->schedule->item;
-            float pickupAddedWeight;
-            float dropoffAddedWeight;
-            // NOTE(brendan): keep track of where to insert pickup point
-            for (List<int> **pPickupEnd = &currentTaxi->schedule;
-                 *pPickupEnd;
-                 pPickupEnd = &((*pPickupEnd)->next)) {
-              pickupEnd = (*pPickupEnd)->item;
-              pickupAddedWeight = netPathWeight(pickupStart, pickupVertex, 
-                                                pickupEnd);
-              // NOTE(brendan): insert dropoff point after pickup point
-              for (List<int> **pDropoffEnd = pPickupEnd;
-                   *pDropoffEnd;
-                   pDropoffEnd = &((*pDropoffEnd)->next)) {
-                dropoffEnd = (*pDropoffEnd)->item;
-                dropoffAddedWeight = netPathWeight(dropoffStart, dropoffVertex, 
-                                                   dropoffEnd);
-                float insertionAddedWeight = pickupAddedWeight + 
-                                             dropoffAddedWeight;
-                if (insertionAddedWeight < weightAddedByQuery) {
-                  taxiToMeetQuery = currentTaxi;
-                  pickupInsertPoint = pPickupStart;
-                  dropoffInsertPoint = pDropoffStart;
-                  weightAddedByQuery = insertionAddedWeight;
-                }
-                pDropoffStart = pDropoffEnd;
-                dropoffStart = (*pDropoffStart)->item;
-              }
-              pPickupStart = pPickupEnd;
-              pickupStart = (*pPickupStart)->item;
-            }
+        int firstPickupEnd = 
+          currentTaxi->schedule ? currentTaxi->schedule->item : NO_PATH;
+        float firstPickupWeight = 
+          netPathWeight(currentTaxiVertex, pickupVertex, firstPickupEnd);
+        initInsertionPoint(&pickup, currentTaxiVertex, firstPickupEnd, 0, 
+                           firstPickupWeight);
+        for (List<int> *pPickup = currentTaxi->schedule;
+             pPickup;
+             pPickup = pPickup->next) {
+          int firstDropoffEnd;
+          if (!List<int>::itemAt(&firstDropoffEnd, currentTaxi->schedule,
+                                 pickup.index)) {
+            firstDropoffEnd = NO_PATH;
           }
-        }
-        // NOTE(brendan): take care of case where there is no schedule
-        else {
-          float insertionAddedWeight =
-            getShortestPath(currentTaxiVertex, pickupVertex)->totalWeight;
-          insertionAddedWeight +=
-            getShortestPath(pickupVertex, dropoffVertex)->totalWeight;
-          if (insertionAddedWeight < weightAddedByQuery) {
-            taxiToMeetQuery = currentTaxi;
-            weightAddedByQuery = insertionAddedWeight;
-            pickupInsertPoint = 0;
-            dropoffInsertPoint = &currentTaxi->schedule;
+          float firstDropoffWeight = 
+            netPathWeight(pickupVertex, dropoffVertex, firstDropoffEnd);
+          initInsertionPoint(&dropoff, pickupVertex, firstDropoffEnd, 
+                             pickup.index, firstDropoffWeight);
+          setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
+          for (List<int> *pDropoff = pPickup;
+               pDropoff;
+               pDropoff = pDropoff->next) {
+            updateInsertionPoint(&dropoff, pDropoff, dropoffVertex);
+            setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
           }
+          updateInsertionPoint(&pickup, pPickup, pickupVertex);
         }
+        // NOTE(brendan): dropoff will go after pickup if both are at the end
+        // of the current schedule (before insertion)
+        dropoff.weight = getShortestPath(pickupVertex, 
+                                         dropoffVertex)->totalWeight;
+        dropoff.start = pickupVertex;
+        setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
       }
-      // NOTE(brendan): found a taxi that is capable of meeting the query
-      if (taxiToMeetQuery) {
-        if (pickupInsertPoint) {
-          (*pickupInsertPoint)->next = 
-            List<int>::addToList(pickupVertex, (*pickupInsertPoint)->next);
-        }
-        // NOTE(brendan): deals with the case where we add the pickup first
-        else {
-          taxiToMeetQuery->schedule = 
-            List<int>::addToList(pickupVertex, taxiToMeetQuery->schedule);
-        }
-        (*dropoffInsertPoint)->next = 
-          List<int>::addToList(dropoffVertex, (*dropoffInsertPoint)->next);
-        // TODO(brendan): remove; testing
-        debugPrintList(taxiToMeetQuery->schedule);
+      if (minTaxiQuery.taxi) {
+        minTaxiQuery.taxi->schedule = 
+          List<int>::insertAt(minTaxiQuery.taxi->schedule, pickupVertex, 
+                              minTaxiQuery.pickupIndex);
+        minTaxiQuery.taxi->schedule = 
+          List<int>::insertAt(minTaxiQuery.taxi->schedule, dropoffVertex, 
+                              minTaxiQuery.dropoffIndex + 1);
+        // TODO(brendan): remove; debugging
+        debugPrintList(minTaxiQuery.taxi->schedule);
       }
     }
 
@@ -173,7 +160,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
           // NOTE(brendan): reached a scheduled vertex
           if (!currentTaxi->shortestPath->next) {
             // TODO(brendan): remove; testing
-            printf("picked up %d\n", currentTaxi->schedule->item);
+            printf("reached %d\n", currentTaxi->schedule->item);
             currentTaxi->schedule = 
               List<int>::removeHead(currentTaxi->schedule);
           }
@@ -260,11 +247,61 @@ debugPrintList(List<int> *list)
   }
 }
 
+// NOTE(brendan): INPUT: min taxi-query, taxi to set, pickup and
+// dropoff insertion points. OUTPUT: none. UPDATE: minTaxiQuery is
+// conditionally updated if the given insertion points are cheaper
+internal void
+setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi, 
+                InsertionPoint *pickup, InsertionPoint *dropoff)
+{
+  // TODO(brendan): assert inputs != 0
+  float insertWeight = pickup->weight + dropoff->weight;
+  if (insertWeight < minTaxiQuery->weight) {
+    minTaxiQuery->taxi = currentTaxi;
+    minTaxiQuery->weight = insertWeight;
+    minTaxiQuery->pickupIndex = pickup->index;
+    minTaxiQuery->dropoffIndex = dropoff->index;
+  }
+}
+
+// NOTE(brendan): INPUT: insertion-point, schedule, mid-point vertex
+// OUTPUT: none. UPDATE: insertion point is updated; this is done once
+// every loop iteration in the query-insertion alg.
+internal void
+updateInsertionPoint(InsertionPoint *insertPoint, List<int> *schedule,
+                     int midPoint)
+{
+  int nextEndPoint = schedule->next ? schedule->next->item : NO_PATH;
+  float nextPointWeight =
+    netPathWeight(schedule->item, midPoint, nextEndPoint);
+  initInsertionPoint(insertPoint, schedule->item, nextEndPoint,
+                     insertPoint->index + 1, nextPointWeight);
+}
+
+// NOTE(brendan): INPUT: insertion-point, start and end points, index and
+// weight. OUTPUT: none. UPDATE: the insertion-point; it is initialized
+internal void
+initInsertionPoint(InsertionPoint *insertPoint, int start, int end,
+                   int index, float weight)
+{
+  // TODO(brendan): assert insertPoint != 0
+  insertPoint->start = start;
+  insertPoint->end = end;
+  insertPoint->index = index;
+  insertPoint->weight = weight;
+}
+
 // NOTE(brendan): INPUT: a start point, a mid point and an end point.
 // OUTPUT: the net weight from replacing start->end to start->mid->end
 internal float
 netPathWeight(int startPoint, int midPoint, int endPoint)
 {
+  if (startPoint == NO_PATH) {
+    return getShortestPath(midPoint, endPoint)->totalWeight;
+  }
+  if (endPoint == NO_PATH) {
+    return getShortestPath(startPoint, midPoint)->totalWeight;
+  }
   float taxiAddedWeight = getShortestPath(startPoint, midPoint)->totalWeight;
   taxiAddedWeight += getShortestPath(midPoint, endPoint)->totalWeight;
   return taxiAddedWeight - getShortestPath(startPoint, endPoint)->totalWeight;
@@ -321,8 +358,8 @@ internal int
 getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
 {
   // NOTE(brendan): map co-ords to vertex
-  float pitch = (float)taxiState->screenHeight/DIMENSION;
-  float stride = (float)taxiState->screenWidth/DIMENSION;
+  float pitch = (float)taxiState->screenHeight/(float)DIMENSION;
+  float stride = (float)taxiState->screenWidth/(float)DIMENSION;
   return (int)((taxi->position.x - stride/2.0f)/stride + 
                ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
 }

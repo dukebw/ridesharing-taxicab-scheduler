@@ -26,6 +26,23 @@ struct Taxi {
   List<DirectedEdge *> *shortestPath;
 };
 
+// NOTE(brendan): contains data for insertion points in the query-insertion
+// alg.
+struct InsertionPoint {
+  int start;
+  int end;
+  int index;
+  float weight;
+};
+
+// NOTE(brendan): struct for storing the current min taxi query to be updated
+struct TaxiQuery {
+  Taxi *taxi;
+  float weight;
+  int pickupIndex;
+  int dropoffIndex;
+};
+
 // NOTE(brendan): struct containing all the state for the application
 struct TaxiState {
   bool graphInitialized;
