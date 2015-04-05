@@ -1,6 +1,6 @@
 /* ========================================================================
    File: taxicab.cpp
-   Date: Mar. 26/15
+   Date: Apr. 5/15
    Revision: 1
    Creator: Brendan Duke
    Notice: (C) Copyright 2015 by BRD Inc. All Rights Reserved.
@@ -38,7 +38,7 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
 
 internal void
 initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
-            Point position, List<int> *schedule);
+            Point position);
 
 inline void
 placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
@@ -79,13 +79,10 @@ void updateAndRender(TaxiState *taxiState, int dt)
       float weightAddedByQuery = INFINITY;
       for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
         currentTaxi = &taxiState->taxis[taxiIndex];
-        // NOTE(brendan): dropoff will always be inserted at LEAST after the
-        // first node in the schedule (after at least the pickup point)
-        dropoffInsertPoint = &currentTaxi->schedule;
         int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
         if (currentTaxi->schedule) {
           if (currentTaxi->numberOfPassengers < taxiState->maxPassengerCount) {
-            List<int> **pPickupStart = &currentTaxi->schedule;
+            List<int> **pPickupStart = 0;
             int pickupStart = currentTaxiVertex;
             int pickupEnd = currentTaxi->schedule->item;
             List<int> **pDropoffStart = &currentTaxi->schedule;
@@ -97,12 +94,14 @@ void updateAndRender(TaxiState *taxiState, int dt)
             for (List<int> **pPickupEnd = &currentTaxi->schedule;
                  *pPickupEnd;
                  pPickupEnd = &((*pPickupEnd)->next)) {
+              pickupEnd = (*pPickupEnd)->item;
               pickupAddedWeight = netPathWeight(pickupStart, pickupVertex, 
                                                 pickupEnd);
               // NOTE(brendan): insert dropoff point after pickup point
               for (List<int> **pDropoffEnd = pPickupEnd;
                    *pDropoffEnd;
                    pDropoffEnd = &((*pDropoffEnd)->next)) {
+                dropoffEnd = (*pDropoffEnd)->item;
                 dropoffAddedWeight = netPathWeight(dropoffStart, dropoffVertex, 
                                                    dropoffEnd);
                 float insertionAddedWeight = pickupAddedWeight + 
@@ -111,12 +110,13 @@ void updateAndRender(TaxiState *taxiState, int dt)
                   taxiToMeetQuery = currentTaxi;
                   pickupInsertPoint = pPickupStart;
                   dropoffInsertPoint = pDropoffStart;
+                  weightAddedByQuery = insertionAddedWeight;
                 }
-                dropoffStart = (*pDropoffEnd)->item;
                 pDropoffStart = pDropoffEnd;
+                dropoffStart = (*pDropoffStart)->item;
               }
-              pickupStart = (*pPickupEnd)->item;
               pPickupStart = pPickupEnd;
+              pickupStart = (*pPickupStart)->item;
             }
           }
         }
@@ -128,6 +128,9 @@ void updateAndRender(TaxiState *taxiState, int dt)
             getShortestPath(pickupVertex, dropoffVertex)->totalWeight;
           if (insertionAddedWeight < weightAddedByQuery) {
             taxiToMeetQuery = currentTaxi;
+            weightAddedByQuery = insertionAddedWeight;
+            pickupInsertPoint = 0;
+            dropoffInsertPoint = &currentTaxi->schedule;
           }
         }
       }
@@ -139,13 +142,13 @@ void updateAndRender(TaxiState *taxiState, int dt)
         }
         // NOTE(brendan): deals with the case where we add the pickup first
         else {
-          currentTaxi->schedule = List<int>::addToList(pickupVertex, 
-                                                       currentTaxi->schedule);
+          taxiToMeetQuery->schedule = 
+            List<int>::addToList(pickupVertex, taxiToMeetQuery->schedule);
         }
-        (*dropoffInsertPoint)->next =
+        (*dropoffInsertPoint)->next = 
           List<int>::addToList(dropoffVertex, (*dropoffInsertPoint)->next);
         // TODO(brendan): remove; testing
-        debugPrintList(currentTaxi->schedule);
+        debugPrintList(taxiToMeetQuery->schedule);
       }
     }
 
@@ -167,6 +170,13 @@ void updateAndRender(TaxiState *taxiState, int dt)
           // NOTE(brendan): set taxi's position to its destination
           currentTaxi->position.x = destination.x;
           currentTaxi->position.y = destination.y;
+          // NOTE(brendan): reached a scheduled vertex
+          if (!currentTaxi->shortestPath->next) {
+            // TODO(brendan): remove; testing
+            printf("picked up %d\n", currentTaxi->schedule->item);
+            currentTaxi->schedule = 
+              List<int>::removeHead(currentTaxi->schedule);
+          }
           currentTaxi->shortestPath = currentTaxi->shortestPath->next;
           setTaxiVelocity(currentTaxi, taxiState);
         }
@@ -177,12 +187,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
       // NOTE(brendan): get the next dropoff or pickup spot in the schedule
       // and discard last one
       else if (currentTaxi->schedule) {
-        // TODO(brendan): remove; testing
-        printf("Picking up %d\n", currentTaxi->schedule->item);
-
-        initTaxiCab(currentTaxi, taxiState, 0, currentTaxi->position,
-                    currentTaxi->schedule);
-        currentTaxi->schedule = List<int>::removeHead(currentTaxi->schedule);
+        initTaxiCab(currentTaxi, taxiState, 0, currentTaxi->position);
       }
       placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
                  (int)currentTaxi->position.x, 
@@ -233,7 +238,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
     // NOTE(brendan): init taxis
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
       initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, 
-                  {stride/2.0f, pitch/2.0f}, 0);
+                  {stride/2.0f, pitch/2.0f});
+      taxiState->taxis[taxiIndex].schedule = 0;
     }
   }
 
@@ -326,16 +332,15 @@ getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
 // position and velocity are set based on its shortestPath
 internal void
 initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
-            Point position, List<int> *schedule)
+            Point position)
 {
   // TODO(brendan): assert taxi != 0, 
   taxi->numberOfPassengers = numberOfPassengers;
   taxi->position = position;
-  taxi->schedule = schedule;
-  if (schedule) {
+  if (taxi->schedule) {
     int taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
     taxi->shortestPath = getShortestPath(taxiCurrentVertex, 
-                                         schedule->item)->edgeList;
+                                         taxi->schedule->item)->edgeList;
     setTaxiVelocity(taxi, taxiState);
   }
   else {
