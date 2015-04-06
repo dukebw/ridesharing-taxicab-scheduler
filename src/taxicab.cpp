@@ -145,12 +145,11 @@ void updateAndRender(TaxiState *taxiState, int dt)
               {false, dropoffVertex}, minTaxiQuery.dropoffIndex + 1);
         // NOTE(brendan): reset shortestPath based on schedule?
         minTaxiQuery.taxi->changePath = true;
-        Point *pickupPoint = &taxiState->intersectionCoords[pickupVertex];
+        // NOTE(brendan): add images to to-be-drawn lists
         taxiState->drawPickups = 
-          List<Point *>::addToList(pickupPoint, taxiState->drawPickups);
-        Point *dropoffPoint = &taxiState->intersectionCoords[dropoffVertex];
+          List<int>::addToList(pickupVertex, taxiState->drawPickups);
         taxiState->drawDropoffs =
-          List<Point *>::addToList(dropoffPoint, taxiState->drawDropoffs);
+          List<int>::addToList(dropoffVertex, taxiState->drawDropoffs);
 
         // TODO(brendan): remove; debugging
         debugPrintList(minTaxiQuery.taxi->schedule);
@@ -206,17 +205,19 @@ void updateAndRender(TaxiState *taxiState, int dt)
       placeImage(taxiState->renderer, taxiTexture, 
                  (int)currentTaxi->position.x,
                  (int)currentTaxi->position.y, 30, 40);
-      for (List<Point *> *p = taxiState->drawPickups;
-           p;
-           p = p->next) {
+      for (List<int> *pPickups = taxiState->drawPickups;
+           pPickups;
+           pPickups = pPickups->next) {
+        Point pickup = taxiState->intersectionCoords[pPickups->item];
         placeImage(taxiState->renderer, taxiState->textures[PICKUP_TEXTURE],
-                   (int)p->item->x, (int)p->item->y, 30, 40);
+                   (int)pickup.x, (int)pickup.y, 30, 40);
       }
-      for (List<Point *> *p = taxiState->drawDropoffs;
-           p;
-           p = p->next) {
+      for (List<int> *pDropoffs = taxiState->drawDropoffs;
+           pDropoffs;
+           pDropoffs = pDropoffs->next) {
+        Point dropoff = taxiState->intersectionCoords[pDropoffs->item];
         placeImage(taxiState->renderer, taxiState->textures[DROPOFF_TEXTURE],
-                   (int)p->item->x, (int)p->item->y, 44, 30);
+                   (int)dropoff.x, (int)dropoff.y, 44, 30);
       }
     }
   }
@@ -411,18 +412,16 @@ removeTaxiQuery(Taxi *taxi, TaxiState *taxiState)
 {
   if (taxi->schedule->item.pickup) {
     ++taxi->passengerCount;
-    Point *pickupPoint = 
-      &taxiState->intersectionCoords[taxi->schedule->item.vertex];
     taxiState->drawPickups = 
-      List<Point *>::deleteFromList(pickupPoint, taxiState->drawPickups);
+      List<int>::deleteFromList(taxi->schedule->item.vertex, 
+                                taxiState->drawPickups);
   }
   else {
     --taxi->passengerCount;
     --taxi->queryCount;
-    Point *dropoffPoint = 
-      &taxiState->intersectionCoords[taxi->schedule->item.vertex];
-    taxiState->drawPickups = 
-      List<Point *>::deleteFromList(dropoffPoint, taxiState->drawDropoffs);
+    taxiState->drawDropoffs = 
+      List<int>::deleteFromList(taxi->schedule->item.vertex,
+                                taxiState->drawDropoffs);
   }
   taxi->schedule = List<Query>::removeHead(taxi->schedule);
   printf("taxi number of passengers: %d\n", taxi->passengerCount);

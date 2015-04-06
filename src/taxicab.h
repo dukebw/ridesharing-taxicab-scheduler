@@ -66,8 +66,8 @@ struct TaxiState {
   EdgeWeightedDigraph roadNetwork;
   Point intersectionCoords[INTERSECTIONS];
   Taxi taxis[NUMBER_OF_TAXIS];
-  List<Point *> *drawPickups;
-  List<Point *> *drawDropoffs;
+  List<int> *drawPickups;
+  List<int> *drawDropoffs;
 };
 
 // TODO(brendan): put in update_and_render to avoid cycles in uses diagram
