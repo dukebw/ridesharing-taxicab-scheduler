@@ -22,10 +22,10 @@
 // Forward declarations
 // ------------------------------------------------------------------------
 
-internal void debugPrintList(List<int> *list);
+internal void debugPrintList(List<Query> *list);
 
 internal void
-updateInsertionPoint(InsertionPoint *insertPoint, List<int> *schedule,
+updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
                      int midPoint);
 
 internal void
@@ -46,12 +46,14 @@ netPathWeight(int startPoint, int midPoint, int endPoint);
 internal int
 getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState);
 
+inline void removeTaxiQuery(Taxi *taxi);
+
 internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
 
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
-            Point position);
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
+            bool changePath, int queryCount, Point position);
 
 inline void
 placeImage(SDL_Renderer *renderer, SDL_Texture *image, int x, int y,
@@ -92,48 +94,64 @@ void updateAndRender(TaxiState *taxiState, int dt)
       InsertionPoint dropoff = {};
       for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
         currentTaxi = &taxiState->taxis[taxiIndex];
-        int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
-        int firstPickupEnd = 
-          currentTaxi->schedule ? currentTaxi->schedule->item : NO_PATH;
-        float firstPickupWeight = 
-          netPathWeight(currentTaxiVertex, pickupVertex, firstPickupEnd);
-        initInsertionPoint(&pickup, currentTaxiVertex, firstPickupEnd, 0, 
-                           firstPickupWeight);
-        for (List<int> *pPickup = currentTaxi->schedule;
-             pPickup;
-             pPickup = pPickup->next) {
-          int firstDropoffEnd;
-          if (!List<int>::itemAt(&firstDropoffEnd, currentTaxi->schedule,
-                                 pickup.index)) {
-            firstDropoffEnd = NO_PATH;
+        if ((currentTaxi->passengerCount < taxiState->maxPassengerCount) &&
+            (currentTaxi->queryCount < taxiState->maxQueryCount)) {
+          int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, taxiState);
+          int firstPickupEnd = NO_PATH;
+          if (currentTaxi->schedule) {
+            firstPickupEnd = currentTaxi->schedule->item.vertex;
           }
-          float firstDropoffWeight = 
-            netPathWeight(pickupVertex, dropoffVertex, firstDropoffEnd);
-          initInsertionPoint(&dropoff, pickupVertex, firstDropoffEnd, 
-                             pickup.index, firstDropoffWeight);
-          setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
-          for (List<int> *pDropoff = pPickup;
-               pDropoff;
-               pDropoff = pDropoff->next) {
-            updateInsertionPoint(&dropoff, pDropoff, dropoffVertex);
+          float firstPickupWeight = 
+            netPathWeight(currentTaxiVertex, pickupVertex, firstPickupEnd);
+          initInsertionPoint(&pickup, currentTaxiVertex, firstPickupEnd, 0, 
+              firstPickupWeight);
+          for (List<Query> *pPickup = currentTaxi->schedule;
+               pPickup;
+               pPickup = pPickup->next) {
+            Query firstDropoffEnd;
+            if (!List<Query>::itemAt(&firstDropoffEnd, currentTaxi->schedule,
+                  pickup.index)) {
+              firstDropoffEnd.vertex = NO_PATH;
+            }
+            float firstDropoffWeight = 
+              netPathWeight(pickupVertex, dropoffVertex, 
+                  firstDropoffEnd.vertex);
+            initInsertionPoint(&dropoff, pickupVertex, firstDropoffEnd.vertex,
+                pickup.index, firstDropoffWeight);
             setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
+            for (List<Query> *pDropoff = pPickup;
+                 pDropoff;
+                 pDropoff = pDropoff->next) {
+              updateInsertionPoint(&dropoff, pDropoff, dropoffVertex);
+              setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
+            }
+            updateInsertionPoint(&pickup, pPickup, pickupVertex);
           }
-          updateInsertionPoint(&pickup, pPickup, pickupVertex);
+          // NOTE(brendan): dropoff will go after pickup if both are at the end
+          // of the current schedule (before insertion)
+          dropoff.weight = getShortestPath(pickupVertex, 
+              dropoffVertex)->totalWeight;
+          dropoff.start = pickupVertex;
+          setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
         }
-        // NOTE(brendan): dropoff will go after pickup if both are at the end
-        // of the current schedule (before insertion)
-        dropoff.weight = getShortestPath(pickupVertex, 
-                                         dropoffVertex)->totalWeight;
-        dropoff.start = pickupVertex;
-        setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, &dropoff);
       }
       if (minTaxiQuery.taxi) {
+        ++minTaxiQuery.taxi->queryCount;
         minTaxiQuery.taxi->schedule = 
-          List<int>::insertAt(minTaxiQuery.taxi->schedule, pickupVertex, 
-                              minTaxiQuery.pickupIndex);
+          List<Query>::insertAt(minTaxiQuery.taxi->schedule, 
+              {true, pickupVertex}, minTaxiQuery.pickupIndex);
         minTaxiQuery.taxi->schedule = 
-          List<int>::insertAt(minTaxiQuery.taxi->schedule, dropoffVertex, 
-                              minTaxiQuery.dropoffIndex + 1);
+          List<Query>::insertAt(minTaxiQuery.taxi->schedule, 
+              {false, dropoffVertex}, minTaxiQuery.dropoffIndex + 1);
+        // NOTE(brendan): reset shortestPath based on schedule?
+        minTaxiQuery.taxi->changePath = true;
+        Point *pickupPoint = &taxiState->intersectionCoords[pickupVertex];
+        taxiState->drawPickups = 
+          List<Point *>::addToList(pickupPoint, taxiState->drawPickups);
+        Point *dropoffPoint = &taxiState->intersectionCoords[dropoffVertex];
+        taxiState->drawDropoffs =
+          List<Point *>::addToList(dropoffPoint, taxiState->drawDropoffs);
+
         // TODO(brendan): remove; debugging
         debugPrintList(minTaxiQuery.taxi->schedule);
       }
@@ -158,13 +176,13 @@ void updateAndRender(TaxiState *taxiState, int dt)
           currentTaxi->position.x = destination.x;
           currentTaxi->position.y = destination.y;
           // NOTE(brendan): reached a scheduled vertex
-          if (!currentTaxi->shortestPath->next) {
-            // TODO(brendan): remove; testing
-            printf("reached %d\n", currentTaxi->schedule->item);
-            currentTaxi->schedule = 
-              List<int>::removeHead(currentTaxi->schedule);
+          if (currentTaxi->changePath) {
+            currentTaxi->changePath = false;
+            currentTaxi->shortestPath = 0;
           }
-          currentTaxi->shortestPath = currentTaxi->shortestPath->next;
+          else {
+            currentTaxi->shortestPath = currentTaxi->shortestPath->next;
+          }
           setTaxiVelocity(currentTaxi, taxiState);
         }
 
@@ -173,12 +191,33 @@ void updateAndRender(TaxiState *taxiState, int dt)
       }
       // NOTE(brendan): get the next dropoff or pickup spot in the schedule
       // and discard last one
-      else if (currentTaxi->schedule) {
-        initTaxiCab(currentTaxi, taxiState, 0, currentTaxi->position);
+      else {
+        initTaxiCab(currentTaxi, taxiState, currentTaxi->passengerCount, 
+            false, currentTaxi->queryCount, currentTaxi->position);
       }
-      placeImage(taxiState->renderer, taxiState->textures[TAXI_TEXTURE], 
-                 (int)currentTaxi->position.x, 
-                 (int)currentTaxi->position.y, 20, 20);
+      // NOTE(brendan): do drawing of all images
+      SDL_Texture *taxiTexture;
+      if (currentTaxi->passengerCount == taxiState->maxPassengerCount) {
+        taxiTexture = taxiState->textures[TAXI_FULL_TEXTURE];
+      }
+      else {
+        taxiTexture = taxiState->textures[TAXI_TEXTURE];
+      }
+      placeImage(taxiState->renderer, taxiTexture, 
+                 (int)currentTaxi->position.x,
+                 (int)currentTaxi->position.y, 30, 40);
+      for (List<Point *> *p = taxiState->drawPickups;
+           p;
+           p = p->next) {
+        placeImage(taxiState->renderer, taxiState->textures[PICKUP_TEXTURE],
+                   (int)p->item->x, (int)p->item->y, 30, 40);
+      }
+      for (List<Point *> *p = taxiState->drawDropoffs;
+           p;
+           p = p->next) {
+        placeImage(taxiState->renderer, taxiState->textures[DROPOFF_TEXTURE],
+                   (int)p->item->x, (int)p->item->y, 44, 30);
+      }
     }
   }
   else {
@@ -187,6 +226,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
     taxiState->queryInterval = TAXI_QUERY_INTERVAL;
     taxiState->timeSinceLastQuery = 0;
     taxiState->maxPassengerCount = 3;
+    taxiState->maxQueryCount = 3;
     makeEdgeWeightedDigraph(&taxiState->roadNetwork, INTERSECTIONS);
 
     // NOTE(brendan): place vertices on screen
@@ -224,8 +264,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
 
     // NOTE(brendan): init taxis
     for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
-      initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, 
-                  {stride/2.0f, pitch/2.0f});
+      initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, false, 0,
+                  taxiState->intersectionCoords[taxiIndex]);
       taxiState->taxis[taxiIndex].schedule = 0;
     }
   }
@@ -240,10 +280,10 @@ void updateAndRender(TaxiState *taxiState, int dt)
 
 // TODO(brendan): testing; remove
 internal void
-debugPrintList(List<int> *list)
+debugPrintList(List<Query> *list)
 {
   for (; list; list = list->next) {
-    printf(list->next ? "%d -> " : "%d\n", list->item);
+    printf(list->next ? "%d -> " : "%d\n", list->item.vertex);
   }
 }
 
@@ -268,13 +308,13 @@ setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi,
 // OUTPUT: none. UPDATE: insertion point is updated; this is done once
 // every loop iteration in the query-insertion alg.
 internal void
-updateInsertionPoint(InsertionPoint *insertPoint, List<int> *schedule,
+updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
                      int midPoint)
 {
-  int nextEndPoint = schedule->next ? schedule->next->item : NO_PATH;
+  int nextEndPoint = schedule->next ? schedule->next->item.vertex : NO_PATH;
   float nextPointWeight =
-    netPathWeight(schedule->item, midPoint, nextEndPoint);
-  initInsertionPoint(insertPoint, schedule->item, nextEndPoint,
+    netPathWeight(schedule->item.vertex, midPoint, nextEndPoint);
+  initInsertionPoint(insertPoint, schedule->item.vertex, nextEndPoint,
                      insertPoint->index + 1, nextPointWeight);
 }
 
@@ -364,20 +404,53 @@ getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
                ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
 }
 
+// NOTE(brendan): INPUT: taxi. OUTPUT: none. UPDATE: changes taxi's number
+// of passengers
+inline void
+removeTaxiQuery(Taxi *taxi, TaxiState *taxiState)
+{
+  if (taxi->schedule->item.pickup) {
+    ++taxi->passengerCount;
+    Point *pickupPoint = 
+      &taxiState->intersectionCoords[taxi->schedule->item.vertex];
+    taxiState->drawPickups = 
+      List<Point *>::deleteFromList(pickupPoint, taxiState->drawPickups);
+  }
+  else {
+    --taxi->passengerCount;
+    --taxi->queryCount;
+    Point *dropoffPoint = 
+      &taxiState->intersectionCoords[taxi->schedule->item.vertex];
+    taxiState->drawPickups = 
+      List<Point *>::deleteFromList(dropoffPoint, taxiState->drawDropoffs);
+  }
+  taxi->schedule = List<Query>::removeHead(taxi->schedule);
+  printf("taxi number of passengers: %d\n", taxi->passengerCount);
+}
+
 // INPUT: taxi-state, taxi, schedule. OUTPUT: none. UPDATE: the taxi is
 // updated; its shortestPath is set based on its schedule, and its
 // position and velocity are set based on its shortestPath
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, int numberOfPassengers,
-            Point position)
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
+            bool changePath, int queryCount, Point position)
 {
   // TODO(brendan): assert taxi != 0, 
-  taxi->numberOfPassengers = numberOfPassengers;
+  taxi->passengerCount = passengerCount;
   taxi->position = position;
+  taxi->changePath = changePath;
+  taxi->queryCount = queryCount;
   if (taxi->schedule) {
     int taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
-    taxi->shortestPath = getShortestPath(taxiCurrentVertex, 
-                                         taxi->schedule->item)->edgeList;
+    if (taxiCurrentVertex == taxi->schedule->item.vertex) {
+      printf("reached %d\n", taxi->schedule->item.vertex);
+      removeTaxiQuery(taxi, taxiState);
+    }
+    else {
+      int nextScheduled = taxi->schedule->item.vertex;
+      taxi->shortestPath =
+        getShortestPath(taxiCurrentVertex, nextScheduled)->edgeList;
+    }
     setTaxiVelocity(taxi, taxiState);
   }
   else {

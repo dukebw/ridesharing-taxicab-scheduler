@@ -7,7 +7,7 @@ LDFLAGS=$(SDL_LDFLAGS)
 CC=g++
 
 SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp\
-				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp
+				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp helper.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=taxicab_scheduler
 # Build directory

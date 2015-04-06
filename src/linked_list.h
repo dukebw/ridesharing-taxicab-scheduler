@@ -140,14 +140,14 @@ List<T>::emptyList(List<T> **list)
 template<typename T> List<T> *
 List<T>::deleteFromList(T toDeleteItem, List<T> *list) 
 {
-  if(list != NULL) {
+  if (list) {
     List<T> *current;
     List<T> *previous;
-    for(current = list, previous = NULL; 
-        (current != NULL) && (current->item != toDeleteItem); 
-        previous = current, current = current->next);
-    if(current != NULL) {
-      if(previous != NULL) {
+    for (current = list, previous = 0; 
+         (current != 0) && (current->item != toDeleteItem); 
+         previous = current, current = current->next);
+    if (current) {
+      if (previous) {
         previous->next = current->next;
       }
       else {
@@ -158,7 +158,7 @@ List<T>::deleteFromList(T toDeleteItem, List<T> *list)
     return list;
   }
   else {
-    return NULL;
+    return 0;
   }
 }
 

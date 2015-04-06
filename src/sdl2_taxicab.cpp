@@ -12,15 +12,18 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 #include <SDL2/SDL.h>
 #include <time.h>
 
-internal char *imageNames[] = {(char *)"../misc/simple_grid.bmp", 
-                               (char *)"../misc/taxi.bmp"};
+internal char *imageNames[] = {(char *)"../misc/toronto.bmp", 
+                               (char *)"../misc/BTaxi.bmp",
+                               (char *)"../misc/RTaxi.bmp",
+                               (char *)"../misc/SPerson.bmp",
+                               (char *)"../misc/NPerson.bmp"};
 
 // NOTE(brendan): The window we'll be rendering to
 global_variable SDL_Window* gWindow = NULL;
 
 // NOTE(brendan): Screen dimension constants
-internal const int SCREEN_WIDTH = 640;
-internal const int SCREEN_HEIGHT = 480;
+internal const int SCREEN_WIDTH = 703;
+internal const int SCREEN_HEIGHT = 602;
 
 // NOTE(brendan): does the necessary initialization of SDL2 at program startup
 internal bool 

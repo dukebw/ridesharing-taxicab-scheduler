@@ -6,22 +6,31 @@
 #include "helper.h"
 #include <SDL2/SDL.h>
 
-#define NUMBER_OF_IMAGES 2
+#define NUMBER_OF_IMAGES 5
 #define NUMBER_OF_TAXIS 3
 
-enum {BACKGROUND_TEXTURE, TAXI_TEXTURE};
+enum {BACKGROUND_TEXTURE, TAXI_TEXTURE, TAXI_FULL_TEXTURE, PICKUP_TEXTURE,
+      DROPOFF_TEXTURE};
+
+// NOTE(brendan): for keeping track of pickup/dropoff queries
+struct Query {
+  bool pickup;
+  int vertex;
+};
 
 // NOTE(brendan): contains data that each taxi object needs to draw it
 // and calculate its schedule
 struct Taxi {
-  int numberOfPassengers;
+  int passengerCount;
+  int queryCount;
+  bool changePath;
   // NOTE(brendan): rendering
   Point position;
   Vector velocity;
   // NOTE(brendan): for schedule-updating
   // NOTE(brendan): allocate and free schedules; shortestPaths live
   // statically in taxi_searching
-  List<int> *schedule;
+  List<Query> *schedule;
   // NOTE(brendan): pointer to shortest path that the taxi is on
   List<DirectedEdge *> *shortestPath;
 };
@@ -49,6 +58,7 @@ struct TaxiState {
   int screenWidth;
   int screenHeight;
   int maxPassengerCount;
+  int maxQueryCount;
   int timeSinceLastQuery;
   int queryInterval;
   SDL_Renderer *renderer;
@@ -56,6 +66,8 @@ struct TaxiState {
   EdgeWeightedDigraph roadNetwork;
   Point intersectionCoords[INTERSECTIONS];
   Taxi taxis[NUMBER_OF_TAXIS];
+  List<Point *> *drawPickups;
+  List<Point *> *drawDropoffs;
 };
 
 // TODO(brendan): put in update_and_render to avoid cycles in uses diagram
