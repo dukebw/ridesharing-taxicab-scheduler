@@ -12,8 +12,6 @@ struct Point {
   float y;
 };
 
-bool operator!=(const Point& p1, const Point& p2);
-
 struct Rectangle {
   Point topLeft;
   Point bottomRight;
