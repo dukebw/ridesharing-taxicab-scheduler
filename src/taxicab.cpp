@@ -14,8 +14,8 @@
 
 // TODO(brendan): testing; remove
 #define DIMENSION 8
-#define SPEED_FACTOR 0.0012f
-#define TAXI_QUERY_INTERVAL 3000
+#define SPEED_FACTOR 0.0016f
+#define TAXI_QUERY_INTERVAL 1000
 #define NO_PATH -1
 
 // -------------------------------------------------------------------------
