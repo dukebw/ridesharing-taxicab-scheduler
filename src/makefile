@@ -1,13 +1,14 @@
 SDL_CFLAGS=`sdl2-config --cflags`
-SDL_LDFLAGS=`sdl2-config --libs`
+SDL_LDFLAGS=`sdl2-config --libs` -lSDL2_image
 
-CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11 -g
-LDFLAGS=$(SDL_LDFLAGS)
+CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11 -g # -O3
+INCLUDE_FLAGS=-I/usr/include/libxml2
+LDFLAGS=$(SDL_LDFLAGS) -lxml2
 
 CC=g++
 
 SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp\
-				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp helper.cpp
+				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=taxicab_scheduler
 # Build directory
@@ -19,7 +20,7 @@ $(BUILD)$(EXECUTABLE): $(OBJECTS)
 	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 
 .cpp.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< $(INCLUDE_FLAGS) -o $@
 
 MKDIR_P = mkdir -p
 
