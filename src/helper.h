@@ -27,6 +27,11 @@ struct Vector {
     float y;
 };
 
+struct VecDouble {
+    double x;
+    double y;
+};
+
 struct Dimensions {
     int width; 
     int height;

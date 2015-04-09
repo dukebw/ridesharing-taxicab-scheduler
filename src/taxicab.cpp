@@ -233,20 +233,26 @@ void updateAndRender(TaxiState *taxiState, int dt)
                                 taxiState->drawPickups);
         List<int>::traverseList(drawListImages, taxiState, DROPOFF_TEXTURE,
                                 taxiState->drawDropoffs);
+
         // TODO(brendan): remove; testing
         for (int nodeIndex = 0; 
-             nodeIndex < taxiState->nodesCount; 
+             nodeIndex < taxiState->wayNodesCount; 
              ++nodeIndex) {
-            int nodePixelX = (int)((float)taxiState->screenWidth*
-                                   taxiState->nodes[nodeIndex].dis.x/
+            int nodePixelX = (int)((double)taxiState->screenWidth*
+                                   taxiState->wayNodes[nodeIndex].dis.x/
                                    taxiState->mapCorners.x);
-            int nodePixelY = (int)((float)taxiState->screenWidth*
-                                   taxiState->nodes[nodeIndex].dis.y/
+            int nodePixelY = (int)((double)taxiState->screenHeight*
+                                   taxiState->wayNodes[nodeIndex].dis.y/
                                    taxiState->mapCorners.y);
-            /* printf("pixel X: %d pixel Y: %d\n", nodePixelX, nodePixelY); */
-            SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0, 0, 0xFF);
+            // NOTE(brendan): check if node inside screen
+            if (nodePixelX < 0 || nodePixelX >= taxiState->screenWidth ||
+                nodePixelY < 0 || nodePixelY >= taxiState->screenHeight) {
+                printf("pixel X: %d pixel Y: %d\n", nodePixelX, nodePixelY);
+            }
 
+            SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0, 0, 0xFF);
             SDL_RenderDrawPoint(taxiState->renderer, nodePixelX, nodePixelY);
+
         }
     }
     else {
@@ -495,7 +501,7 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
 // source for formula: http://www.movable-type.co.uk/scripts/latlong.html
 // INPUT: longitude/latitude in degrees
 // OUTPUT: Approximation to aerial distance between points, in km
-internal Vector
+internal VecDouble
 findDisplacement(double startLongitude, double startLatitude,
                  double endLongitude, double endLatitude) 
 {
@@ -507,10 +513,9 @@ findDisplacement(double startLongitude, double startLatitude,
     endLatitude = endLatitude*degreesToRadians;
     endLongitude = endLongitude*degreesToRadians;
     double meanLatitude = (startLatitude + endLatitude)/2.0;
-    Vector result;
-    result.x = (float)(earthRadius*(endLongitude - 
-                                    startLongitude)*cos(meanLatitude));
-    result.y = (float)(earthRadius*(endLatitude - startLatitude));
+    VecDouble result;
+    result.x = earthRadius*(endLongitude - startLongitude)*cos(meanLatitude);
+    result.y = earthRadius*(endLatitude - startLatitude);
     return result;
 }
 
@@ -564,24 +569,64 @@ drawListImages(void *pTaxiState, int imageIndex, int coordIndex)
 // XML parsing functions
 // ------------------------------------------------------------------------
 
-// TODO(brendan): fix/remove?
-#if 0
 // NOTE(brendan): INPUT: xmlDocPtr and xmlXPathObjecPtr to "way" nodes in
 // OpenStreetMap file. OUTPUT: none. UPDATE: none.
 internal void
-parseWay(xmlDocPtr doc, xmlXPathObjectPtr ways, const char *outfile)
+parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
 {
-    FILE *f = fopen(outfile, "w");
-    xmlNodeSetPtr nodeset = ways->nodesetval;
-    for (int i = 0; i < nodeset->nodeNr; ++i) {
-        xmlChar *keyword = xmlGetProp(nodeset->nodeTab[i], (xmlChar *)"ref");
-        xmlNodePtr parent = nodeset->nodeTab[i]->parent;
-        xmlChar *wayid = xmlGetProp(parent, (xmlChar *)"id");
-        fprintf(f, "way id: %s ref: %s\n", wayid, keyword);
+    xmlNodeSetPtr waysNodeSet = ways->nodesetval;
+    for (int nodeIndex = 0; nodeIndex < waysNodeSet->nodeNr; ++nodeIndex) {
+        // NOTE(brendan): narrowing down to refs on streets
+        bool validHighway = false;
+        xmlNodePtr pWay = waysNodeSet->nodeTab[nodeIndex];
+        for (xmlNodePtr pWayChild = pWay->children;
+             pWayChild;
+             pWayChild = pWayChild->next) {
+            if (xmlStrcmp(pWayChild->name, (xmlChar *)"tag") == 0) {
+                xmlChar *tagKey = xmlGetProp(pWayChild, (xmlChar *)"k");
+                if (xmlStrcmp(tagKey, (xmlChar *)"highway") == 0) {
+                    xmlChar *tagVal = xmlGetProp(pWayChild, (xmlChar *)"v");
+                    if (xmlStrcmp(tagVal, (xmlChar *)"residential") == 0) {
+                        validHighway = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (validHighway) {
+            for (xmlNodePtr pWayChild = pWay->children;
+                 pWayChild;
+                 pWayChild = pWayChild->next) {
+                // NOTE(brendan): getting the (x, y) data from the
+                // reference
+                // TODO(brendan): check if child is "nd"
+                if (xmlStrcmp(pWayChild->name, (xmlChar *)"nd") == 0) {
+                    const char *ref = 
+                        (const char *)xmlGetProp(pWayChild, (xmlChar *)"ref");
+                    Node myRefNode = {};
+                    myRefNode.id = strtol(ref, 0, 10);
+                    Node *pNode =
+                        (Node *)bsearch((void *)&myRefNode, 
+                                        (const void *)taxiState->nodes, 
+                                        taxiState->nodesCount, sizeof(Node), 
+                                        compNode);
+                    // NOTE(brendan): only take those nodes that were in our
+                    // bounding box
+                    if (pNode) {
+                        taxiState->wayNodes[taxiState->wayNodesCount].dis.x = 
+                            pNode->dis.x;
+                        taxiState->wayNodes[taxiState->wayNodesCount].dis.y = 
+                            pNode->dis.y;
+                        taxiState->wayNodes[taxiState->wayNodesCount].id = 
+                            myRefNode.id;
+                        ++taxiState->wayNodesCount;
+                    }
+                }
+            }
+        }
     }
-    fclose(f);
+    printf("wayNodesCount: %d\n", taxiState->wayNodesCount);
 }
-#endif
 
 // NOTE(brendan): INPUT: TaxiState, xmlDocPtr and xmlXPathObjectPtr (nodes).
 // parses all the ids of nodes and puts them in an array, sorted by id and 
@@ -590,13 +635,13 @@ internal void
 parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 {
     // NOTE(brendan): define image boundaries
-    local_persist double leftLongitude = -79.415;
-    local_persist double topLatitude = 43.783;
-    local_persist double rightLongitude = -79.393;
-    local_persist double bottomLatitude = 43.771;
+    local_persist double minLon = -79.415;
+    local_persist double maxLat = 43.783;
+    local_persist double maxLon = -79.393;
+    local_persist double minLat = 43.771;
 
-    taxiState->mapCorners = findDisplacement(leftLongitude, topLatitude, 
-                                             rightLongitude, bottomLatitude);
+    taxiState->mapCorners = findDisplacement(minLon, maxLat, 
+                                             maxLon, minLat);
 
     xmlNodeSetPtr nodeset = nodes->nodesetval;
     for (int nodeIndex = 0; nodeIndex < nodeset->nodeNr; ++nodeIndex) {
@@ -611,25 +656,19 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
                                      (xmlChar *)"lat");
         double nodeLongitude = strtod(longitude, 0);
         double nodeLatitude = strtod(latitude, 0);
-        taxiState->nodes[nodeIndex].dis = 
-            findDisplacement(leftLongitude, topLatitude,
-                             nodeLongitude, nodeLatitude);
-        taxiState->nodes[nodeIndex].id = strtol(id, 0, 10);
-        ++taxiState->nodesCount;
+        // NOTE(brendan): only accept nodes that are within our bounding
+        // box
+        if (nodeLongitude >= minLon && nodeLongitude <= maxLon &&
+            nodeLatitude >= minLat && nodeLatitude <= maxLat) {
+            taxiState->nodes[nodeIndex].dis = 
+                findDisplacement(minLon, maxLat,
+                                 nodeLongitude, nodeLatitude);
+            taxiState->nodes[nodeIndex].id = strtol(id, 0, 10);
+            ++taxiState->nodesCount;
+        }
     }
+    printf("Nodes total count: %d\n", nodes->nodesetval->nodeNr);
     qsort(taxiState->nodes, taxiState->nodesCount, sizeof(Node), compNode);
-
-    // TODO(brendan): remove; testing
-    // TODO(brendan): not getting IDs correctly anymore?
-    for (int nodeIndex = 0; nodeIndex < taxiState->nodesCount; ++nodeIndex) {
-        printf("x: %.8f y: %.8f id: %ld\n", 
-               taxiState->nodes[nodeIndex].dis.x, 
-               taxiState->nodes[nodeIndex].dis.y, 
-               taxiState->nodes[nodeIndex].id);
-    }
-    printf("corners x: %.8f y:%.8f\n", taxiState->mapCorners.x, 
-                                       taxiState->mapCorners.y);
-    printf("count: %d\n", taxiState->nodesCount);
 }
 
 // NOTE(brendan): INPUT: name of file. OUTPUT: none. Parses XML, then finds
@@ -638,30 +677,27 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 internal int 
 parse(TaxiState *taxiState, char const *infile)
 {
-    const xmlChar *nodespath = (xmlChar *)"//node";
-
     xmlDocPtr doc = xmlParseFile(infile);
     Stopif(!doc, return -1, "Error: unable to parse file \"%s\"\n", infile);
 
     xmlXPathContextPtr context = xmlXPathNewContext(doc);
     Stopif(!context, return -2, "Error: unable to create new XPath context\n");
 
+    const xmlChar *nodespath = (xmlChar *)"//node";
     xmlXPathObjectPtr nodes = xmlXPathEvalExpression(nodespath, context);
     Stopif(!nodes, return -3, "Xpath '//node failed.");
 
-#if 0
-    const xmlChar *waypath = (xmlChar *)"//way/nd";
+    const xmlChar *waypath = (xmlChar *)"//way";
     xmlXPathObjectPtr ways = xmlXPathEvalExpression(waypath, context);
     Stopif(!ways, return -3, "Xpath '//way/nd failed.");
 
-    const char *waysOutFile = "yonge_sheppard_ways";
-    parseWay(doc, ways, waysOutFile);
-
-    xmlXPathFreeObject(ways);
-#endif
     parseNodes(taxiState, doc, nodes);
 
+    parseWays(taxiState, doc, ways);
+
     xmlXPathFreeContext(context);
+    xmlXPathFreeObject(ways);
+    xmlXPathFreeObject(nodes);
     xmlFreeDoc(doc);
     return 0;
 }

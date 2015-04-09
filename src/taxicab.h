@@ -22,7 +22,7 @@ struct Query {
 // NOTE(brendan): for storing data parsed from OSM files
 struct Node {
     // NOTE(brendan): x, y displacement from top-left point
-    Vector dis;
+    VecDouble dis;
     long id;
 };
 
@@ -84,7 +84,9 @@ struct TaxiState {
     List<int> *drawDropoffs;
     Node nodes[MAX_NODES];
     int nodesCount;
-    Vector mapCorners;
+    Node wayNodes[MAX_NODES];
+    int wayNodesCount;
+    VecDouble mapCorners;
 };
 
 // TODO(brendan): put in update_and_render to avoid cycles in uses diagram
