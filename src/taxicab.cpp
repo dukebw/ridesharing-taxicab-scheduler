@@ -233,6 +233,21 @@ void updateAndRender(TaxiState *taxiState, int dt)
                                 taxiState->drawPickups);
         List<int>::traverseList(drawListImages, taxiState, DROPOFF_TEXTURE,
                                 taxiState->drawDropoffs);
+        // TODO(brendan): remove; testing
+        for (int nodeIndex = 0; 
+             nodeIndex < taxiState->nodesCount; 
+             ++nodeIndex) {
+            int nodePixelX = (int)((float)taxiState->screenWidth*
+                                   taxiState->nodes[nodeIndex].dis.x/
+                                   taxiState->mapCorners.x);
+            int nodePixelY = (int)((float)taxiState->screenWidth*
+                                   taxiState->nodes[nodeIndex].dis.y/
+                                   taxiState->mapCorners.y);
+            /* printf("pixel X: %d pixel Y: %d\n", nodePixelX, nodePixelY); */
+            SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0, 0, 0xFF);
+
+            SDL_RenderDrawPoint(taxiState->renderer, nodePixelX, nodePixelY);
+        }
     }
     else {
         // TODO(brendan): libxml2 testing; remove
@@ -475,28 +490,29 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
     }
 }
 
-// TODO(brendan): need this later?
-#if 0
 // NOTE(brendan): calculates the distance between two (longitude, latitude)
 // pairs in km
 // source for formula: http://www.movable-type.co.uk/scripts/latlong.html
 // INPUT: longitude/latitude in degrees
 // OUTPUT: Approximation to aerial distance between points, in km
 internal Vector
-findDisplacement(Node start, Node end) 
+findDisplacement(double startLongitude, double startLatitude,
+                 double endLongitude, double endLatitude) 
 {
     local_persist double earthRadius = 6371.0;
     local_persist double degreesToRadians = M_PI/180.0; 
-    double startLatitude = start.latitude*degreesToRadians;
-    double startLongitude = start.longitude*degreesToRadians;
-    double endLatitude = end.latitude*degreesToRadians;
-    double endLongitude = end.longitude*degreesToRadians;
+    // NOTE(brendan): convert to radians
+    startLatitude = startLatitude*degreesToRadians;
+    startLongitude = startLongitude*degreesToRadians;
+    endLatitude = endLatitude*degreesToRadians;
+    endLongitude = endLongitude*degreesToRadians;
     double meanLatitude = (startLatitude + endLatitude)/2.0;
-    float x = earthRadius*(endLongitude - startLongitude)*cos(meanLatitude);
-    float y = earthRadius*(endLatitude - startLatitude);
-    return {x, y};
+    Vector result;
+    result.x = (float)(earthRadius*(endLongitude - 
+                                    startLongitude)*cos(meanLatitude));
+    result.y = (float)(earthRadius*(endLatitude - startLatitude));
+    return result;
 }
-#endif
 
 // NOTE(brendan): INPUT: void pointers to Nodes. OUTPUT: -1 if nodeOne's
 // id is less than nodeTwo's, 0 if the id's are equal and +1 if nodeOne's
@@ -573,6 +589,15 @@ parseWay(xmlDocPtr doc, xmlXPathObjectPtr ways, const char *outfile)
 internal void
 parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 {
+    // NOTE(brendan): define image boundaries
+    local_persist double leftLongitude = -79.415;
+    local_persist double topLatitude = 43.783;
+    local_persist double rightLongitude = -79.393;
+    local_persist double bottomLatitude = 43.771;
+
+    taxiState->mapCorners = findDisplacement(leftLongitude, topLatitude, 
+                                             rightLongitude, bottomLatitude);
+
     xmlNodeSetPtr nodeset = nodes->nodesetval;
     for (int nodeIndex = 0; nodeIndex < nodeset->nodeNr; ++nodeIndex) {
         const char *id = 
@@ -584,23 +609,27 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
         const char *latitude = 
             (const char *)xmlGetProp(nodeset->nodeTab[nodeIndex], 
                                      (xmlChar *)"lat");
-        taxiState->nodes[nodeIndex].longitude = strtod(longitude, 0);
-        taxiState->nodes[nodeIndex].latitude = strtod(latitude, 0);
+        double nodeLongitude = strtod(longitude, 0);
+        double nodeLatitude = strtod(latitude, 0);
+        taxiState->nodes[nodeIndex].dis = 
+            findDisplacement(leftLongitude, topLatitude,
+                             nodeLongitude, nodeLatitude);
         taxiState->nodes[nodeIndex].id = strtol(id, 0, 10);
         ++taxiState->nodesCount;
     }
     qsort(taxiState->nodes, taxiState->nodesCount, sizeof(Node), compNode);
 
-#if 0
     // TODO(brendan): remove; testing
+    // TODO(brendan): not getting IDs correctly anymore?
     for (int nodeIndex = 0; nodeIndex < taxiState->nodesCount; ++nodeIndex) {
-        printf("long: %.8f lat: %.8f id: %ld\n", 
-               taxiState->nodes[nodeIndex].longitude, 
-               taxiState->nodes[nodeIndex].latitude, 
+        printf("x: %.8f y: %.8f id: %ld\n", 
+               taxiState->nodes[nodeIndex].dis.x, 
+               taxiState->nodes[nodeIndex].dis.y, 
                taxiState->nodes[nodeIndex].id);
     }
+    printf("corners x: %.8f y:%.8f\n", taxiState->mapCorners.x, 
+                                       taxiState->mapCorners.y);
     printf("count: %d\n", taxiState->nodesCount);
-#endif
 }
 
 // NOTE(brendan): INPUT: name of file. OUTPUT: none. Parses XML, then finds
@@ -609,7 +638,6 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 internal int 
 parse(TaxiState *taxiState, char const *infile)
 {
-    const xmlChar *waypath = (xmlChar *)"//way/nd";
     const xmlChar *nodespath = (xmlChar *)"//node";
 
     xmlDocPtr doc = xmlParseFile(infile);
@@ -618,19 +646,21 @@ parse(TaxiState *taxiState, char const *infile)
     xmlXPathContextPtr context = xmlXPathNewContext(doc);
     Stopif(!context, return -2, "Error: unable to create new XPath context\n");
 
+    xmlXPathObjectPtr nodes = xmlXPathEvalExpression(nodespath, context);
+    Stopif(!nodes, return -3, "Xpath '//node failed.");
+
+#if 0
+    const xmlChar *waypath = (xmlChar *)"//way/nd";
     xmlXPathObjectPtr ways = xmlXPathEvalExpression(waypath, context);
     Stopif(!ways, return -3, "Xpath '//way/nd failed.");
 
-    xmlXPathObjectPtr nodes = xmlXPathEvalExpression(nodespath, context);
-    Stopif(!ways, return -3, "Xpath '//node failed.");
-
-#if 0
     const char *waysOutFile = "yonge_sheppard_ways";
     parseWay(doc, ways, waysOutFile);
+
+    xmlXPathFreeObject(ways);
 #endif
     parseNodes(taxiState, doc, nodes);
 
-    xmlXPathFreeObject(ways);
     xmlXPathFreeContext(context);
     xmlFreeDoc(doc);
     return 0;

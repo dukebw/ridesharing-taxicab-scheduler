@@ -21,8 +21,8 @@ struct Query {
 
 // NOTE(brendan): for storing data parsed from OSM files
 struct Node {
-    double longitude;
-    double latitude;
+    // NOTE(brendan): x, y displacement from top-left point
+    Vector dis;
     long id;
 };
 
@@ -84,6 +84,7 @@ struct TaxiState {
     List<int> *drawDropoffs;
     Node nodes[MAX_NODES];
     int nodesCount;
+    Vector mapCorners;
 };
 
 // TODO(brendan): put in update_and_render to avoid cycles in uses diagram
