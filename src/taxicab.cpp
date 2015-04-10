@@ -34,8 +34,8 @@ inline real32
 findDistance(Vector vectorOne, Vector vectorTwo);
 
 internal void
-updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
-                     int32 midPoint);
+updateInsertionPoint(EdgeWeightedDigraph *digraph, InsertionPoint *insertPoint,
+                     List<Query> *schedule, int32 midPoint);
 
 internal void
 setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi, 
@@ -48,7 +48,8 @@ initInsertionPoint(InsertionPoint *insertionPoint, int32 start, int32 end,
 inline int32 randomVertex(EdgeWeightedDigraph *graph);
 
 internal real32
-netPathWeight(int32 startPoint32, int32 midPoint, int32 endPoint);
+netPathWeight(EdgeWeightedDigraph *digraph, int32 startPoint32, int32 midPoint,
+              int32 endPoint);
 
 internal int32
 getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState);
@@ -118,7 +119,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                         firstPickupEnd = currentTaxi->schedule->item.vertex;
                     }
                     real32 firstPickupWeight = 
-                        netPathWeight(currentTaxiVertex, pickupVertex, 
+                        netPathWeight(&taxiState->roadNetwork, 
+                                      currentTaxiVertex, pickupVertex, 
                                       firstPickupEnd);
                     initInsertionPoint(&pickup, currentTaxiVertex, 
                                        firstPickupEnd, 0, firstPickupWeight);
@@ -132,7 +134,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                             firstDropoffEnd.vertex = NO_PATH;
                         }
                         real32 firstDropoffWeight = 
-                            netPathWeight(pickupVertex, dropoffVertex, 
+                            netPathWeight(&taxiState->roadNetwork, pickupVertex,
+                                          dropoffVertex, 
                                           firstDropoffEnd.vertex);
                         initInsertionPoint(&dropoff, pickupVertex, 
                                            firstDropoffEnd.vertex,
@@ -142,17 +145,19 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                         for (List<Query> *pDropoff = pPickup;
                              pDropoff;
                              pDropoff = pDropoff->next) {
-                            updateInsertionPoint(&dropoff, pDropoff, 
+                            updateInsertionPoint(&taxiState->roadNetwork, 
+                                                 &dropoff, pDropoff, 
                                                  dropoffVertex);
                             setMinTaxiQuery(&minTaxiQuery, currentTaxi, 
                                             &pickup, &dropoff);
                         }
-                        updateInsertionPoint(&pickup, pPickup, pickupVertex);
+                        updateInsertionPoint(&taxiState->roadNetwork, &pickup,
+                                             pPickup, pickupVertex);
                     }
                     // NOTE(brendan): dropoff will go after pickup if both are
                     // at the end of the current schedule (before insertion)
                     dropoff.weight = 
-                        getShortestPath(pickupVertex, 
+                        getShortestPath(&taxiState->roadNetwork, pickupVertex, 
                                         dropoffVertex)->totalWeight;
                     dropoff.start = pickupVertex;
                     setMinTaxiQuery(&minTaxiQuery, currentTaxi, &pickup, 
@@ -304,7 +309,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                 mapUnitsToPixels(taxiState, taxiState->wayNodes[nodeIndex].dis);
         }
 
-        makeAllShortestPaths(&taxiState->roadNetwork);
+        // TODO(brendan): make grid and do this for the grid
+        /* makeAllShortestPaths(&taxiState->roadNetwork); */
 
         // NOTE(brendan): init taxis
         for (int32 taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
@@ -377,12 +383,12 @@ setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi,
 // OUTPUT: none. UPDATE: insertion point is updated; this is done once
 // every loop iteration in the query-insertion alg.
 internal void
-updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
-                     int32 midPoint)
+updateInsertionPoint(EdgeWeightedDigraph *digraph, InsertionPoint *insertPoint,
+                     List<Query> *schedule, int32 midPoint)
 {
     int nextEndPoint = schedule->next ? schedule->next->item.vertex : NO_PATH;
     real32 nextPointWeight =
-        netPathWeight(schedule->item.vertex, midPoint, nextEndPoint);
+        netPathWeight(digraph, schedule->item.vertex, midPoint, nextEndPoint);
     initInsertionPoint(insertPoint, schedule->item.vertex, nextEndPoint,
                        insertPoint->index + 1, nextPointWeight);
 }
@@ -403,17 +409,21 @@ initInsertionPoint(InsertionPoint *insertPoint, int32 start, int32 end,
 // NOTE(brendan): INPUT: a start point, a mid point and an end point.
 // OUTPUT: the net weight from replacing start->end to start->mid->end
 internal real32
-netPathWeight(int32 startPoint, int32 midPoint, int32 endPoint)
+netPathWeight(EdgeWeightedDigraph *digraph, int32 startPoint, int32 midPoint, 
+              int32 endPoint)
 {
     if (startPoint == NO_PATH) {
-        return getShortestPath(midPoint, endPoint)->totalWeight;
+        return getShortestPath(digraph, midPoint, endPoint)->totalWeight;
     }
     if (endPoint == NO_PATH) {
-        return getShortestPath(startPoint, midPoint)->totalWeight;
+        return getShortestPath(digraph, startPoint, midPoint)->totalWeight;
     }
-    real32 taxiAddedWeight = getShortestPath(startPoint, midPoint)->totalWeight;
-    taxiAddedWeight += getShortestPath(midPoint, endPoint)->totalWeight;
-    return taxiAddedWeight - getShortestPath(startPoint, endPoint)->totalWeight;
+    real32 taxiAddedWeight = getShortestPath(digraph, startPoint, 
+                                             midPoint)->totalWeight;
+    taxiAddedWeight += getShortestPath(digraph, midPoint, 
+                                       endPoint)->totalWeight;
+    return taxiAddedWeight - getShortestPath(digraph, startPoint, 
+                                             endPoint)->totalWeight;
 }
 
 inline int32 randomVertex(EdgeWeightedDigraph *graph)
@@ -506,7 +516,8 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
         else {
             int32 nextScheduled = taxi->schedule->item.vertex;
             taxi->shortestPath =
-                getShortestPath(taxiCurrentVertex, nextScheduled)->edgeList;
+                getShortestPath(&taxiState->roadNetwork, taxiCurrentVertex, 
+                                nextScheduled)->edgeList;
         }
         setTaxiVelocity(taxi, taxiState);
     }
