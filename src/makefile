@@ -1,7 +1,7 @@
 SDL_CFLAGS=`sdl2-config --cflags`
 SDL_LDFLAGS=`sdl2-config --libs` -lSDL2_image
 
-CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11 -g # -O3
+CFLAGS=$(SDL_CFLAGS) -c -Wall -std=c++11 -g -O2
 INCLUDE_FLAGS=-I/usr/include/libxml2
 LDFLAGS=$(SDL_LDFLAGS) -lxml2
 

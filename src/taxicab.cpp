@@ -45,8 +45,6 @@ internal void
 initInsertionPoint(InsertionPoint *insertionPoint, int32 start, int32 end,
                    int32 index, real32 weight);
 
-internal real32 speed();
-
 inline int32 randomVertex(EdgeWeightedDigraph *graph);
 
 internal real32
@@ -308,8 +306,9 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
 
         // NOTE(brendan): init taxis
         for (int32 taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+            int32 taxiStartVertex = randomVertex(&taxiState->roadNetwork);
             initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, false, 0,
-                        randomVertex(&taxiState->roadNetwork));
+                        taxiStartVertex);
             taxiState->taxis[taxiIndex].schedule = 0;
         }
     }
@@ -428,7 +427,7 @@ inline int32 randomVertex(EdgeWeightedDigraph *graph)
 internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
 {
-    Stopif((taxi == 0) || (taxiState == 0), 0,
+    Stopif((taxi == 0) || (taxiState == 0), ,
            "Error: null taxi or taxiState passed to setTaxiVelocity\n");
     if (taxi->shortestPath) {
         DirectedEdge *currentEdge = taxi->shortestPath->item;
@@ -490,7 +489,7 @@ internal void
 initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
             bool32 changePath, int32 queryCount, int32 vertex)
 {
-    Stopif((taxi == 0) || (taxiState == 0), 0,
+    Stopif((taxi == 0) || (taxiState == 0), ,
            "Error: null taxi or taxiState passed to initTaxiCab\n");
     taxi->passengerCount = passengerCount;
     taxi->position = taxiState->nodeCoords[vertex];
