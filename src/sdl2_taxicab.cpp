@@ -190,29 +190,35 @@ int main(int argc, char *argv[])
 {
     // NOTE(brendan): state (model) of the taxis on the road network
     TaxiState taxiState = {};
-    taxiState.screenWidth = SCREEN_WIDTH;
-    taxiState.screenHeight = SCREEN_HEIGHT;
+    taxiState.nodes = (Node *)malloc(MAX_NODES*sizeof(Node));
+    if (taxiState.nodes) {
+        taxiState.screenWidth = SCREEN_WIDTH;
+        taxiState.screenHeight = SCREEN_HEIGHT;
 
-    if (!sdl2Init(&taxiState.renderer)) {
-        printf("Failed to initialize!\n");
-    }
-    else if (!sdl2LoadMedia(&taxiState)) {
-        printf("Failed to load media!\n");
+        if (!sdl2Init(&taxiState.renderer)) {
+            printf("Failed to initialize!\n");
+        }
+        else if (!sdl2LoadMedia(&taxiState)) {
+            printf("Failed to load media!\n");
+        }
+        else {
+            // NOTE(brendan): Main loop flag
+            bool globalRunning = true;
+
+            srand((unsigned)time(0));
+
+            int previousTime = SDL_GetTicks(), elapsedTime = 0;
+            // NOTE(brendan): while application is running
+            while (globalRunning) {
+                elapsedTime = SDL_GetTicks() - previousTime;
+                previousTime = SDL_GetTicks();
+                globalRunning = sdl2HandleEvents();
+                updateAndRender(&taxiState, elapsedTime);
+            }
+        }
     }
     else {
-        // NOTE(brendan): Main loop flag
-        bool globalRunning = true;
-
-        srand((unsigned)time(0));
-
-        int previousTime = SDL_GetTicks(), elapsedTime = 0;
-        // NOTE(brendan): while application is running
-        while (globalRunning) {
-            elapsedTime = SDL_GetTicks() - previousTime;
-            previousTime = SDL_GetTicks();
-            globalRunning = sdl2HandleEvents();
-            updateAndRender(&taxiState, elapsedTime);
-        }
+        printf("Failed to allocate nodes array in taxiState\n");
     }
 
     // NOTE(brendan): Free resources and close SDL

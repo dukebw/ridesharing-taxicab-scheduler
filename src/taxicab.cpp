@@ -235,7 +235,7 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
             Vector offsetPosition = currentTaxi->position;
             // TODO(brendan): x offset adjusts for bad map data; fix long-lat to
             // distance calculation using haversince function?
-            offsetPosition.x -= 0.875f*taxiImage->width;
+            offsetPosition.x -= 0.5f*taxiImage->width;
             offsetPosition.y -= taxiImage->height;
             placeImage(taxiState->renderer, taxiImage, offsetPosition);
         }
@@ -245,7 +245,7 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
         List<int32>::traverseList(drawListImages, taxiState, DROPOFF_TEXTURE,
                                   taxiState->drawDropoffs);
 
-#if 0
+#if 1
         // TODO(brendan): remove; testing
         // NOTE(brendan): draw red lines on all the edges of the graph
         // (can see road network)
@@ -280,6 +280,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
         taxiState->maxQueryCount = 3;
         makeEdgeWeightedDigraph(&taxiState->roadNetwork, 
                                 taxiState->uniqueWayNodes);
+        taxiState->nodeCoords = 
+            (Vector *)malloc(taxiState->uniqueWayNodes*sizeof(Vector));
 
         // NOTE(brendan): initialize edges in graph
         for (int32 nodeIndex = 0;
@@ -492,9 +494,10 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
     Stopif((taxi == 0) || (taxiState == 0), ,
            "Error: null taxi or taxiState passed to initTaxiCab\n");
     taxi->passengerCount = passengerCount;
-    taxi->position = taxiState->nodeCoords[vertex];
-    taxi->changePath = changePath;
     taxi->queryCount = queryCount;
+    taxi->changePath = changePath;
+    taxi->position = taxiState->nodeCoords[vertex];
+    taxi->currentVertex = vertex;
     if (taxi->schedule) {
         int32 taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
         if (taxiCurrentVertex == taxi->schedule->item.vertex) {
@@ -581,7 +584,7 @@ drawListImages(void *pTaxiState, int32 imageIndex, int32 coordIndex)
 {
     TaxiState *taxiState = (TaxiState *)pTaxiState;
     Vector offsetCoords = taxiState->nodeCoords[coordIndex];
-    offsetCoords.x -= 0.875f*taxiState->images[imageIndex].width;
+    offsetCoords.x -= 0.5f*taxiState->images[imageIndex].width;
     offsetCoords.y -= taxiState->images[imageIndex].height;
     placeImage(taxiState->renderer, &taxiState->images[imageIndex],
                offsetCoords);
@@ -669,11 +672,12 @@ parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
 internal void
 parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 {
+    // TODO(brendan): could retrieve these from osm file
     // NOTE(brendan): define image boundaries
-    local_persist real64 minLon = -79.415;
-    local_persist real64 maxLat = 43.783;
-    local_persist real64 maxLon = -79.393;
-    local_persist real64 minLat = 43.771;
+    local_persist real64 minLon = -79.420;
+    local_persist real64 maxLat = 43.787;
+    local_persist real64 maxLon = -79.376;
+    local_persist real64 minLat = 43.763;
 
     taxiState->mapCorners = findDisplacement(minLon, maxLat, 
                                              maxLon, minLat);

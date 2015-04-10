@@ -8,9 +8,8 @@
 
 #define NUMBER_OF_IMAGES 5
 #define NUMBER_OF_TAXIS 6
-#define MAX_NODES 8192
-#define MAX_WAYS 128
-#define MAX_WAY_NODES 1024
+#define MAX_NODES 32768
+#define MAX_WAY_NODES 4096
 
 enum {BACKGROUND_TEXTURE, TAXI_TEXTURE, TAXI_FULL_TEXTURE, PICKUP_TEXTURE,
       DROPOFF_TEXTURE};
@@ -84,11 +83,11 @@ struct TaxiState {
     SDL_Renderer *renderer;
     Image images[NUMBER_OF_IMAGES];
     EdgeWeightedDigraph roadNetwork;
-    Vector nodeCoords[MAX_WAY_NODES];
+    Vector *nodeCoords;
     Taxi taxis[NUMBER_OF_TAXIS];
     List<int32> *drawPickups;
     List<int32> *drawDropoffs;
-    Node nodes[MAX_NODES];
+    Node *nodes;
     int32 nodesCount;
     Vector mapCorners;
     Node wayNodes[MAX_WAY_NODES];
