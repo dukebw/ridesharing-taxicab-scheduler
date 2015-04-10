@@ -4,7 +4,8 @@
 #include "linked_list.h"
 #include "dijkstra_sp.h"
 
-#define INTERSECTIONS 64
+// NOTE(brendan): # of unique wayNodes (vertices in graph)
+#define MAX_VERTICES 512
 
 // NOTE(brendan): INPUT: source and destination vertices.
 // OUTPUT: pointer to shortest path from that source to the destination vertex

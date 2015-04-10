@@ -14,12 +14,11 @@ Notice: (C) Copyright 2015 by BRD Inc. All Rights Reserved.
 #include <stdlib.h>
 #include <math.h>
 
-// TODO(brendan): testing; remove
-#define DIMENSION 8
 #define SPEED_FACTOR 0.0016f
 #define TAXI_QUERY_INTERVAL 1000
 #define NO_PATH -1
 
+// TODO(brendan): go through and convert int -> int32 etc.
 // -------------------------------------------------------------------------
 // Function prototypes (forward declarations)
 // ------------------------------------------------------------------------
@@ -28,26 +27,32 @@ Notice: (C) Copyright 2015 by BRD Inc. All Rights Reserved.
 internal void debugPrintList(List<Query> *list);
 #endif
 
+inline Vector
+mapUnitsToPixels(TaxiState *taxiState, Vector unitsVec);
+
+inline real32
+findDistance(Vector vectorOne, Vector vectorTwo);
+
 internal void
 updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
-                     int midPoint);
+                     int32 midPoint);
 
 internal void
 setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi, 
                 InsertionPoint *pickup, InsertionPoint *dropoff);
 
 internal void
-initInsertionPoint(InsertionPoint *insertionPoint, int start, int end,
-                   int index, float weight);
+initInsertionPoint(InsertionPoint *insertionPoint, int32 start, int32 end,
+                   int32 index, real32 weight);
 
-internal float speed();
+internal real32 speed();
 
-inline int randomVertex(EdgeWeightedDigraph *graph);
+inline int32 randomVertex(EdgeWeightedDigraph *graph);
 
-internal float
-netPathWeight(int startPoint, int midPoint, int endPoint);
+internal real32
+netPathWeight(int32 startPoint32, int32 midPoint, int32 endPoint);
 
-internal int
+internal int32
 getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState);
 
 inline void removeTaxiQuery(Taxi *taxi);
@@ -56,25 +61,25 @@ internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState);
 
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
-            bool changePath, int queryCount, Point position);
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
+            bool32 changePath, int32 queryCount, int32 vertex);
 
 inline void
-placeImage(SDL_Renderer *renderer, Image *image, Point point);
+placeImage(SDL_Renderer *renderer, Image *image, Vector point);
 
 internal void
-drawListImages(void *pTaxiState, int imageIndex, int coordIndex);
+drawListImages(void *pTaxiState, int32 imageIndex, int32 coordIndex);
 
-internal int parse(TaxiState *taxiState, char const *infile);
+internal int32 parse(TaxiState *taxiState, char const *infile);
 
-internal int compNode(const void *pNodeOne, const void *pNodeTwo);
+internal int32 compNode(const void *pNodeOne, const void *pNodeTwo);
 
 // -------------------------------------------------------------------------
 // Access functions
 // ------------------------------------------------------------------------
 
 // NOTE(brendan): does updating and rendering for applications
-void updateAndRender(TaxiState *taxiState, int dt) 
+void updateAndRender(TaxiState *taxiState, int32 dt) 
 {
     // NOTE(brendan): Clear screen
     // TODO(brendan): need to set draw colour here?
@@ -90,30 +95,31 @@ void updateAndRender(TaxiState *taxiState, int dt)
         taxiState->timeSinceLastQuery += dt;
         if (taxiState->timeSinceLastQuery > taxiState->queryInterval) {
             taxiState->timeSinceLastQuery = 0;
-            int pickupVertex = randomVertex(&taxiState->roadNetwork);
-            int dropoffVertex = randomVertex(&taxiState->roadNetwork);
+            int32 pickupVertex = randomVertex(&taxiState->roadNetwork);
+            int32 dropoffVertex = randomVertex(&taxiState->roadNetwork);
 
             // NOTE(brendan): we iterate through the taxi's schedule and 
             // try to find the cheapest of all combinations for insert points 
-            // for the pickup and
-            // dropoff of the query
+            // for the pickup and dropoff of the query
             Taxi *currentTaxi = 0;
             TaxiQuery minTaxiQuery = {};
             minTaxiQuery.weight = INFINITY;
             InsertionPoint pickup = {};
             InsertionPoint dropoff = {};
-            for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+            for (int32 taxiIndex = 0; 
+                 taxiIndex < NUMBER_OF_TAXIS; 
+                 ++taxiIndex) {
                 currentTaxi = &taxiState->taxis[taxiIndex];
                 if ((currentTaxi->passengerCount < 
                      taxiState->maxPassengerCount) &&
                     (currentTaxi->queryCount < taxiState->maxQueryCount)) {
-                    int currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, 
-                                                                 taxiState);
-                    int firstPickupEnd = NO_PATH;
+                    int32 currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, 
+                                                                   taxiState);
+                    int32 firstPickupEnd = NO_PATH;
                     if (currentTaxi->schedule) {
                         firstPickupEnd = currentTaxi->schedule->item.vertex;
                     }
-                    float firstPickupWeight = 
+                    real32 firstPickupWeight = 
                         netPathWeight(currentTaxiVertex, pickupVertex, 
                                       firstPickupEnd);
                     initInsertionPoint(&pickup, currentTaxiVertex, 
@@ -127,7 +133,7 @@ void updateAndRender(TaxiState *taxiState, int dt)
                                                  pickup.index)) {
                             firstDropoffEnd.vertex = NO_PATH;
                         }
-                        float firstDropoffWeight = 
+                        real32 firstDropoffWeight = 
                             netPathWeight(pickupVertex, dropoffVertex, 
                                           firstDropoffEnd.vertex);
                         initInsertionPoint(&dropoff, pickupVertex, 
@@ -165,37 +171,38 @@ void updateAndRender(TaxiState *taxiState, int dt)
                     List<Query>::insertAt(minTaxiQuery.taxi->schedule, 
                                           {false, dropoffVertex}, 
                                           minTaxiQuery.dropoffIndex + 1);
-                // NOTE(brendan): reset shortestPath based on schedule?
+                // NOTE(brendan): reset shortestPath based on schedule
                 minTaxiQuery.taxi->changePath = true;
                 // NOTE(brendan): add images to to-be-drawn lists
                 taxiState->drawPickups = 
-                    List<int>::addToList(pickupVertex, taxiState->drawPickups);
+                    List<int32>::addToList(pickupVertex, 
+                                           taxiState->drawPickups);
                 taxiState->drawDropoffs =
-                    List<int>::addToList(dropoffVertex, 
-                                         taxiState->drawDropoffs);
+                    List<int32>::addToList(dropoffVertex, 
+                                           taxiState->drawDropoffs);
             }
         }
 
         // NOTE(brendan): update taxi positions, velocities, schedules and paths
-        for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+        for (int32 taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
             Taxi *currentTaxi = &taxiState->taxis[taxiIndex];
             if (currentTaxi->shortestPath) {
                 DirectedEdge *currentEdge = currentTaxi->shortestPath->item;
-                Point destination = 
-                    taxiState->intersectionCoords[currentEdge->to];
-                float deltaY = destination.y - currentTaxi->position.y;
-                float deltaX = destination.x - currentTaxi->position.x;
+                Vector destination = taxiState->nodeCoords[currentEdge->to];
+                real32 deltaY = destination.y - currentTaxi->position.y;
+                real32 deltaX = destination.x - currentTaxi->position.x;
 
                 // NOTE(brendan): taxi reaches the destination on this physics
                 // update
-                float vy = currentTaxi->velocity.y;
-                float vx = currentTaxi->velocity.x;
-                float timeToDestX = (vx != 0.0f) ? deltaX/vx : 0.0f;
-                float timeToDestY = (vy != 0.0f) ? deltaY/vy : 0.0f;
+                real32 vy = currentTaxi->velocity.y;
+                real32 vx = currentTaxi->velocity.x;
+                real32 timeToDestX = (vx != 0.0f) ? deltaX/vx : 0.0f;
+                real32 timeToDestY = (vy != 0.0f) ? deltaY/vy : 0.0f;
                 if ((timeToDestX < dt) && (timeToDestY < dt)) {
                     // NOTE(brendan): set taxi's position to its destination
                     currentTaxi->position.x = destination.x;
                     currentTaxi->position.y = destination.y;
+                    currentTaxi->currentVertex = currentEdge->to;
                     // NOTE(brendan): reached a scheduled vertex
                     if (currentTaxi->changePath) {
                         currentTaxi->changePath = false;
@@ -216,7 +223,8 @@ void updateAndRender(TaxiState *taxiState, int dt)
             else {
                 initTaxiCab(currentTaxi, taxiState, 
                             currentTaxi->passengerCount, false, 
-                            currentTaxi->queryCount, currentTaxi->position);
+                            currentTaxi->queryCount, 
+                            currentTaxi->currentVertex);
             }
             // NOTE(brendan): do drawing of all images
             Image *taxiImage;
@@ -226,37 +234,44 @@ void updateAndRender(TaxiState *taxiState, int dt)
             else {
                 taxiImage = &taxiState->images[TAXI_TEXTURE];
             }
-            placeImage(taxiState->renderer, taxiImage, currentTaxi->position);
+            Vector offsetPosition = currentTaxi->position;
+            // TODO(brendan): x offset adjusts for bad map data; fix long-lat to
+            // distance calculation using haversince function?
+            offsetPosition.x -= 0.875f*taxiImage->width;
+            offsetPosition.y -= taxiImage->height;
+            placeImage(taxiState->renderer, taxiImage, offsetPosition);
         }
         // NOTE(brendan): draw the pickup and dropoff query bitmaps
-        List<int>::traverseList(drawListImages, taxiState, PICKUP_TEXTURE,
-                                taxiState->drawPickups);
-        List<int>::traverseList(drawListImages, taxiState, DROPOFF_TEXTURE,
-                                taxiState->drawDropoffs);
+        List<int32>::traverseList(drawListImages, taxiState, PICKUP_TEXTURE,
+                                  taxiState->drawPickups);
+        List<int32>::traverseList(drawListImages, taxiState, DROPOFF_TEXTURE,
+                                  taxiState->drawDropoffs);
 
+#if 0
         // TODO(brendan): remove; testing
-        for (int nodeIndex = 0; 
+        // NOTE(brendan): draw red lines on all the edges of the graph
+        // (can see road network)
+        SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0, 0, 0xFF);
+        Vector prevPixels = {};
+        for (int32 nodeIndex = 0;
              nodeIndex < taxiState->wayNodesCount; 
              ++nodeIndex) {
-            int nodePixelX = (int)((double)taxiState->screenWidth*
-                                   taxiState->wayNodes[nodeIndex].dis.x/
-                                   taxiState->mapCorners.x);
-            int nodePixelY = (int)((double)taxiState->screenHeight*
-                                   taxiState->wayNodes[nodeIndex].dis.y/
-                                   taxiState->mapCorners.y);
-            // NOTE(brendan): check if node inside screen
-            if (nodePixelX < 0 || nodePixelX >= taxiState->screenWidth ||
-                nodePixelY < 0 || nodePixelY >= taxiState->screenHeight) {
-                printf("pixel X: %d pixel Y: %d\n", nodePixelX, nodePixelY);
+            // NOTE(brendan): draw line between nodes on the "way"
+            Vector nodePixels = 
+                mapUnitsToPixels(taxiState, taxiState->wayNodes[nodeIndex].dis);
+            if ((nodeIndex > 0) &&
+                (taxiState->wayNodes[nodeIndex].wayId == 
+                 taxiState->wayNodes[nodeIndex - 1].wayId)) {
+                SDL_RenderDrawLine(taxiState->renderer, (int32)nodePixels.x, 
+                                   (int32)nodePixels.y, (int32)prevPixels.x, 
+                                   (int32)prevPixels.y);
             }
-
-            SDL_SetRenderDrawColor(taxiState->renderer, 0xFF, 0, 0, 0xFF);
-            SDL_RenderDrawPoint(taxiState->renderer, nodePixelX, nodePixelY);
-
+            prevPixels = nodePixels;
         }
+#endif
     }
     else {
-        // TODO(brendan): libxml2 testing; remove
+        // TODO(brendan): rename this
         parse(taxiState, "../src/yonge_sheppard_map.osm");
 
         // NOTE(brendan): do initialization of graph and taxiState
@@ -265,45 +280,36 @@ void updateAndRender(TaxiState *taxiState, int dt)
         taxiState->timeSinceLastQuery = 0;
         taxiState->maxPassengerCount = 3;
         taxiState->maxQueryCount = 3;
-        makeEdgeWeightedDigraph(&taxiState->roadNetwork, INTERSECTIONS);
-
-        // NOTE(brendan): place vertices on screen
-        float pitch = (float)taxiState->screenHeight/DIMENSION;
-        float stride = (float)taxiState->screenWidth/DIMENSION;
-        for (int y = 0; y < DIMENSION; ++y) {
-            for (int x = 0; x < DIMENSION; ++x) {
-                taxiState->intersectionCoords[x + y*DIMENSION] = 
-                    {x*stride + stride/2, y*pitch + pitch/2};
-            }
-        }
+        makeEdgeWeightedDigraph(&taxiState->roadNetwork, 
+                                taxiState->uniqueWayNodes);
 
         // NOTE(brendan): initialize edges in graph
-        for (int row = 0; row < DIMENSION; ++row) {
-            for (int col = 0; col < DIMENSION; ++col) {
-                if (row > 0) {
-                    addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                            (row - 1)*DIMENSION + col, speed());
-                }
-                if (col > 0) {
-                    addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                            row*DIMENSION + (col - 1), speed());
-                }
-                if (row < (DIMENSION - 1)) {
-                    addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                            (row + 1)*DIMENSION + col, speed());
-                }
-                if (col < (DIMENSION - 1)) {
-                    addEdge(&taxiState->roadNetwork, row*DIMENSION + col, 
-                            row*DIMENSION + (col + 1), speed());
+        for (int32 nodeIndex = 0;
+             nodeIndex < taxiState->wayNodesCount; 
+             ++nodeIndex) {
+            Node *currentNode = &taxiState->wayNodes[nodeIndex];
+            if (nodeIndex > 0) {
+                Node *previousNode = &taxiState->wayNodes[nodeIndex - 1];
+                if (currentNode->wayId == previousNode->wayId) {
+                    // NOTE(brendan): add two-way street edge
+                    real32 distance = findDistance(currentNode->dis,
+                                                   previousNode->dis);
+                    addEdge(&taxiState->roadNetwork, currentNode->vertex,
+                            previousNode->vertex, distance);
+                    addEdge(&taxiState->roadNetwork, previousNode->vertex,
+                            currentNode->vertex, distance);
                 }
             }
+            taxiState->nodeCoords[currentNode->vertex] =
+                mapUnitsToPixels(taxiState, taxiState->wayNodes[nodeIndex].dis);
         }
+
         makeAllShortestPaths(&taxiState->roadNetwork);
 
         // NOTE(brendan): init taxis
-        for (int taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
+        for (int32 taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
             initTaxiCab(&taxiState->taxis[taxiIndex], taxiState, 0, false, 0,
-                        taxiState->intersectionCoords[taxiIndex]);
+                        randomVertex(&taxiState->roadNetwork));
             taxiState->taxis[taxiIndex].schedule = 0;
         }
     }
@@ -315,6 +321,28 @@ void updateAndRender(TaxiState *taxiState, int dt)
 // -------------------------------------------------------------------------
 // Local functions
 // ------------------------------------------------------------------------
+
+inline Vector
+mapUnitsToPixels(TaxiState *taxiState, Vector unitsVec)
+{
+    Vector result;
+    result.x = (real32)taxiState->screenWidth*
+               unitsVec.x/taxiState->mapCorners.x;
+    result.y = (real32)taxiState->screenHeight*
+               unitsVec.y/taxiState->mapCorners.y;
+    return result;
+}
+
+// NOTE(brendan): INPUT: (x1, y1) and (x2, y2). OUTPUT: real32 distance between
+// the two points
+inline real32
+findDistance(Vector vectorOne, Vector vectorTwo)
+{
+    real32 deltaX = vectorTwo.x - vectorOne.x;
+    real32 deltaY = vectorTwo.y - vectorOne.y;
+    real32 result = sqrt(deltaX*deltaX + deltaY*deltaY);
+    return result;
+}
 
 #if 0
 // TODO(brendan): testing; remove
@@ -335,7 +363,7 @@ setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi,
                 InsertionPoint *pickup, InsertionPoint *dropoff)
 {
     // TODO(brendan): assert inputs != 0
-    float insertWeight = pickup->weight + dropoff->weight;
+    real32 insertWeight = pickup->weight + dropoff->weight;
     if (insertWeight < minTaxiQuery->weight) {
         minTaxiQuery->taxi = currentTaxi;
         minTaxiQuery->weight = insertWeight;
@@ -349,10 +377,10 @@ setMinTaxiQuery(TaxiQuery *minTaxiQuery, Taxi *currentTaxi,
 // every loop iteration in the query-insertion alg.
 internal void
 updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
-                     int midPoint)
+                     int32 midPoint)
 {
     int nextEndPoint = schedule->next ? schedule->next->item.vertex : NO_PATH;
-    float nextPointWeight =
+    real32 nextPointWeight =
         netPathWeight(schedule->item.vertex, midPoint, nextEndPoint);
     initInsertionPoint(insertPoint, schedule->item.vertex, nextEndPoint,
                        insertPoint->index + 1, nextPointWeight);
@@ -361,8 +389,8 @@ updateInsertionPoint(InsertionPoint *insertPoint, List<Query> *schedule,
 // NOTE(brendan): INPUT: insertion-point, start and end points, index and
 // weight. OUTPUT: none. UPDATE: the insertion-point; it is initialized
 internal void
-initInsertionPoint(InsertionPoint *insertPoint, int start, int end,
-                   int index, float weight)
+initInsertionPoint(InsertionPoint *insertPoint, int32 start, int32 end,
+                   int32 index, real32 weight)
 {
     // TODO(brendan): assert insertPoint != 0
     insertPoint->start = start;
@@ -373,8 +401,8 @@ initInsertionPoint(InsertionPoint *insertPoint, int start, int end,
 
 // NOTE(brendan): INPUT: a start point, a mid point and an end point.
 // OUTPUT: the net weight from replacing start->end to start->mid->end
-internal float
-netPathWeight(int startPoint, int midPoint, int endPoint)
+internal real32
+netPathWeight(int32 startPoint, int32 midPoint, int32 endPoint)
 {
     if (startPoint == NO_PATH) {
         return getShortestPath(midPoint, endPoint)->totalWeight;
@@ -382,23 +410,15 @@ netPathWeight(int startPoint, int midPoint, int endPoint)
     if (endPoint == NO_PATH) {
         return getShortestPath(startPoint, midPoint)->totalWeight;
     }
-    float taxiAddedWeight = getShortestPath(startPoint, midPoint)->totalWeight;
+    real32 taxiAddedWeight = getShortestPath(startPoint, midPoint)->totalWeight;
     taxiAddedWeight += getShortestPath(midPoint, endPoint)->totalWeight;
     return taxiAddedWeight - getShortestPath(startPoint, endPoint)->totalWeight;
 }
 
-inline int randomVertex(EdgeWeightedDigraph *graph)
+inline int32 randomVertex(EdgeWeightedDigraph *graph)
 {
-    return (int)(((double)rand()/((double)RAND_MAX + 1.0))*
-                 (double)graph->vertices);
-}
-
-internal float speed() 
-{
-    local_persist int minSpeed = 40;
-    local_persist int maxSpeed = 100;
-    return (float)((double)rand()/(unsigned)(RAND_MAX)*
-                   (maxSpeed - minSpeed) + minSpeed);
+    return (int32)(((real64)rand()/((real64)RAND_MAX + 1.0))*
+                 (real64)graph->vertices);
 }
 
 // NOTE(brendan): INPUT: taxi, taxistate. OUTPUT: none. UPDATE: taxi; taxi's
@@ -408,16 +428,17 @@ internal float speed()
 internal void
 setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
 {
-    // TODO(brendan): assert inputs != 0
+    Stopif((taxi == 0) || (taxiState == 0), 0,
+           "Error: null taxi or taxiState passed to setTaxiVelocity\n");
     if (taxi->shortestPath) {
         DirectedEdge *currentEdge = taxi->shortestPath->item;
-        float speed = currentEdge->weight;
-        float deltaX = taxiState->intersectionCoords[currentEdge->to].x -
-            taxi->position.x;
-        float deltaY = taxiState->intersectionCoords[currentEdge->to].y -
-            taxi->position.y;
-        float distance = sqrt(deltaX*deltaX + deltaY*deltaY);
+        // TODO(brendan): generate random speeds for the roads
+        local_persist real32 speed = 50.0f;
+        Vector node = taxiState->nodeCoords[currentEdge->to];
+        real32 distance = findDistance(taxi->position, node);
         if (distance) {
+            real32 deltaX = node.x - taxi->position.x;
+            real32 deltaY = node.y - taxi->position.y;
             taxi->velocity.x = SPEED_FACTOR*speed*deltaX/distance;
             taxi->velocity.y = SPEED_FACTOR*speed*deltaY/distance;
         }
@@ -432,16 +453,13 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
     }
 }
 
+// TODO(brendan): change/remove?
 // INPUT: taxi, taxi-state. OUTPUT: the vertex that that taxi is currently
 // at, according to its x and y position
-internal int
+internal int32
 getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
 {
-    // NOTE(brendan): map co-ords to vertex
-    float pitch = (float)taxiState->screenHeight/(float)DIMENSION;
-    float stride = (float)taxiState->screenWidth/(float)DIMENSION;
-    return (int)((taxi->position.x - stride/2.0f)/stride + 
-                 ((taxi->position.y - pitch/2.0f)/pitch)*(float)DIMENSION);
+    return taxi->currentVertex;
 }
 
 // NOTE(brendan): INPUT: taxi. OUTPUT: none. UPDATE: changes taxi's number
@@ -452,15 +470,15 @@ removeTaxiQuery(Taxi *taxi, TaxiState *taxiState)
     if (taxi->schedule->item.pickup) {
         ++taxi->passengerCount;
         taxiState->drawPickups = 
-            List<int>::deleteFromList(taxi->schedule->item.vertex, 
-                                      taxiState->drawPickups);
+            List<int32>::deleteFromList(taxi->schedule->item.vertex, 
+                                        taxiState->drawPickups);
     }
     else {
         --taxi->passengerCount;
         --taxi->queryCount;
         taxiState->drawDropoffs = 
-            List<int>::deleteFromList(taxi->schedule->item.vertex,
-                                      taxiState->drawDropoffs);
+            List<int32>::deleteFromList(taxi->schedule->item.vertex,
+                                        taxiState->drawDropoffs);
     }
     taxi->schedule = List<Query>::removeHead(taxi->schedule);
 }
@@ -469,21 +487,22 @@ removeTaxiQuery(Taxi *taxi, TaxiState *taxiState)
 // updated; its shortestPath is set based on its schedule, and its
 // position and velocity are set based on its shortestPath
 internal void
-initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
-            bool changePath, int queryCount, Point position)
+initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
+            bool32 changePath, int32 queryCount, int32 vertex)
 {
-    // TODO(brendan): assert taxi != 0, 
+    Stopif((taxi == 0) || (taxiState == 0), 0,
+           "Error: null taxi or taxiState passed to initTaxiCab\n");
     taxi->passengerCount = passengerCount;
-    taxi->position = position;
+    taxi->position = taxiState->nodeCoords[vertex];
     taxi->changePath = changePath;
     taxi->queryCount = queryCount;
     if (taxi->schedule) {
-        int taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
+        int32 taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
         if (taxiCurrentVertex == taxi->schedule->item.vertex) {
             removeTaxiQuery(taxi, taxiState);
         }
         else {
-            int nextScheduled = taxi->schedule->item.vertex;
+            int32 nextScheduled = taxi->schedule->item.vertex;
             taxi->shortestPath =
                 getShortestPath(taxiCurrentVertex, nextScheduled)->edgeList;
         }
@@ -501,32 +520,33 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int passengerCount,
 // source for formula: http://www.movable-type.co.uk/scripts/latlong.html
 // INPUT: longitude/latitude in degrees
 // OUTPUT: Approximation to aerial distance between points, in km
-internal VecDouble
-findDisplacement(double startLongitude, double startLatitude,
-                 double endLongitude, double endLatitude) 
+internal Vector
+findDisplacement(real64 startLongitude, real64 startLatitude,
+                 real64 endLongitude, real64 endLatitude) 
 {
-    local_persist double earthRadius = 6371.0;
-    local_persist double degreesToRadians = M_PI/180.0; 
+    local_persist real64 earthRadius = 6371.0;
+    local_persist real64 degreesToRadians = M_PI/180.0; 
     // NOTE(brendan): convert to radians
     startLatitude = startLatitude*degreesToRadians;
     startLongitude = startLongitude*degreesToRadians;
     endLatitude = endLatitude*degreesToRadians;
     endLongitude = endLongitude*degreesToRadians;
-    double meanLatitude = (startLatitude + endLatitude)/2.0;
-    VecDouble result;
-    result.x = earthRadius*(endLongitude - startLongitude)*cos(meanLatitude);
-    result.y = earthRadius*(endLatitude - startLatitude);
+    real64 meanLatitude = (startLatitude + endLatitude)/2.0;
+    Vector result;
+    result.x = (real32)(earthRadius*
+                        (endLongitude - startLongitude)*cos(meanLatitude));
+    result.y = (real32)(earthRadius*(endLatitude - startLatitude));
     return result;
 }
 
 // NOTE(brendan): INPUT: void pointers to Nodes. OUTPUT: -1 if nodeOne's
 // id is less than nodeTwo's, 0 if the id's are equal and +1 if nodeOne's
 // id is greater than nodeTwo's
-internal int 
+internal int32 
 compNode(const void *pNodeOne, const void *pNodeTwo)
 {
-    long nodeOneId = ((Node *)pNodeOne)->id;
-    long nodeTwoId = ((Node *)pNodeTwo)->id;
+    uint64 nodeOneId = ((Node *)pNodeOne)->id;
+    uint64 nodeTwoId = ((Node *)pNodeTwo)->id;
     if (nodeOneId < nodeTwoId) {
         return -1;
     }
@@ -544,11 +564,11 @@ compNode(const void *pNodeOne, const void *pNodeTwo)
 
 // NOTE(brendan): places the image at point
 inline void
-placeImage(SDL_Renderer *renderer, Image *image, Point point) 
+placeImage(SDL_Renderer *renderer, Image *image, Vector point) 
 {
     SDL_Rect destRect;
-    destRect.x = (int)point.x;
-    destRect.y = (int)point.y;
+    destRect.x = (int32)point.x;
+    destRect.y = (int32)point.y;
     destRect.w = image->width;
     destRect.h = image->height;
     SDL_RenderCopy(renderer, image->texture, NULL, &destRect ); 
@@ -558,11 +578,14 @@ placeImage(SDL_Renderer *renderer, Image *image, Point point)
 // UPDATE: places the image at point on the renderer. For use with
 // traverseList
 internal void
-drawListImages(void *pTaxiState, int imageIndex, int coordIndex)
+drawListImages(void *pTaxiState, int32 imageIndex, int32 coordIndex)
 {
     TaxiState *taxiState = (TaxiState *)pTaxiState;
+    Vector offsetCoords = taxiState->nodeCoords[coordIndex];
+    offsetCoords.x -= 0.875f*taxiState->images[imageIndex].width;
+    offsetCoords.y -= taxiState->images[imageIndex].height;
     placeImage(taxiState->renderer, &taxiState->images[imageIndex],
-               taxiState->intersectionCoords[coordIndex]);
+               offsetCoords);
 }
 
 // -------------------------------------------------------------------------
@@ -575,10 +598,10 @@ internal void
 parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
 {
     xmlNodeSetPtr waysNodeSet = ways->nodesetval;
-    for (int nodeIndex = 0; nodeIndex < waysNodeSet->nodeNr; ++nodeIndex) {
+    for (int32 wayIndex = 0; wayIndex < waysNodeSet->nodeNr; ++wayIndex) {
         // NOTE(brendan): narrowing down to refs on streets
-        bool validHighway = false;
-        xmlNodePtr pWay = waysNodeSet->nodeTab[nodeIndex];
+        bool32 validHighway = false;
+        xmlNodePtr pWay = waysNodeSet->nodeTab[wayIndex];
         for (xmlNodePtr pWayChild = pWay->children;
              pWayChild;
              pWayChild = pWayChild->next) {
@@ -586,7 +609,10 @@ parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
                 xmlChar *tagKey = xmlGetProp(pWayChild, (xmlChar *)"k");
                 if (xmlStrcmp(tagKey, (xmlChar *)"highway") == 0) {
                     xmlChar *tagVal = xmlGetProp(pWayChild, (xmlChar *)"v");
-                    if (xmlStrcmp(tagVal, (xmlChar *)"residential") == 0) {
+                    if ((xmlStrcmp(tagVal, (xmlChar *)"residential") == 0) ||
+                        (xmlStrcmp(tagVal, (xmlChar *)"primary") == 0) ||
+                        (xmlStrcmp(tagVal, (xmlChar *)"secondary") == 0) ||
+                        (xmlStrcmp(tagVal, (xmlChar *)"tertiary") == 0)) {
                         validHighway = true;
                         break;
                     }
@@ -594,31 +620,41 @@ parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
             }
         }
         if (validHighway) {
+            const char *wayId = 
+                (const char *)xmlGetProp(pWay, (xmlChar *)"id");
             for (xmlNodePtr pWayChild = pWay->children;
                  pWayChild;
                  pWayChild = pWayChild->next) {
                 // NOTE(brendan): getting the (x, y) data from the
                 // reference
-                // TODO(brendan): check if child is "nd"
                 if (xmlStrcmp(pWayChild->name, (xmlChar *)"nd") == 0) {
                     const char *ref = 
                         (const char *)xmlGetProp(pWayChild, (xmlChar *)"ref");
                     Node myRefNode = {};
-                    myRefNode.id = strtol(ref, 0, 10);
+                    myRefNode.id = strtoull(ref, 0, 10);
                     Node *pNode =
                         (Node *)bsearch((void *)&myRefNode, 
                                         (const void *)taxiState->nodes, 
                                         taxiState->nodesCount, sizeof(Node), 
                                         compNode);
                     // NOTE(brendan): only take those nodes that were in our
-                    // bounding box
+                    // bounding box; only count those that haven't been added 
+                    // yet
                     if (pNode) {
-                        taxiState->wayNodes[taxiState->wayNodesCount].dis.x = 
-                            pNode->dis.x;
-                        taxiState->wayNodes[taxiState->wayNodesCount].dis.y = 
-                            pNode->dis.y;
+                        uint64 wayIdVal = strtoull(wayId, 0, 10);
+                        if (pNode->wayId == 0) {
+                            pNode->wayId = wayIdVal;
+                            pNode->vertex = taxiState->uniqueWayNodes;
+                            ++taxiState->uniqueWayNodes;
+                        }
+                        taxiState->wayNodes[taxiState->wayNodesCount].dis = 
+                            pNode->dis;
                         taxiState->wayNodes[taxiState->wayNodesCount].id = 
-                            myRefNode.id;
+                            pNode->id;
+                        taxiState->wayNodes[taxiState->wayNodesCount].wayId = 
+                            wayIdVal;
+                        taxiState->wayNodes[taxiState->wayNodesCount].vertex = 
+                            pNode->vertex;
                         ++taxiState->wayNodesCount;
                     }
                 }
@@ -635,16 +671,16 @@ internal void
 parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 {
     // NOTE(brendan): define image boundaries
-    local_persist double minLon = -79.415;
-    local_persist double maxLat = 43.783;
-    local_persist double maxLon = -79.393;
-    local_persist double minLat = 43.771;
+    local_persist real64 minLon = -79.415;
+    local_persist real64 maxLat = 43.783;
+    local_persist real64 maxLon = -79.393;
+    local_persist real64 minLat = 43.771;
 
     taxiState->mapCorners = findDisplacement(minLon, maxLat, 
                                              maxLon, minLat);
 
     xmlNodeSetPtr nodeset = nodes->nodesetval;
-    for (int nodeIndex = 0; nodeIndex < nodeset->nodeNr; ++nodeIndex) {
+    for (int32 nodeIndex = 0; nodeIndex < nodeset->nodeNr; ++nodeIndex) {
         const char *id = 
             (const char *)xmlGetProp(nodeset->nodeTab[nodeIndex], 
                                      (xmlChar *)"id");
@@ -654,8 +690,8 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
         const char *latitude = 
             (const char *)xmlGetProp(nodeset->nodeTab[nodeIndex], 
                                      (xmlChar *)"lat");
-        double nodeLongitude = strtod(longitude, 0);
-        double nodeLatitude = strtod(latitude, 0);
+        real64 nodeLongitude = strtod(longitude, 0);
+        real64 nodeLatitude = strtod(latitude, 0);
         // NOTE(brendan): only accept nodes that are within our bounding
         // box
         if (nodeLongitude >= minLon && nodeLongitude <= maxLon &&
@@ -663,7 +699,8 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
             taxiState->nodes[nodeIndex].dis = 
                 findDisplacement(minLon, maxLat,
                                  nodeLongitude, nodeLatitude);
-            taxiState->nodes[nodeIndex].id = strtol(id, 0, 10);
+            taxiState->nodes[nodeIndex].id = strtoull(id, 0, 10);
+            // TODO(brendan): remove; debugging
             ++taxiState->nodesCount;
         }
     }
@@ -674,7 +711,7 @@ parseNodes(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr nodes)
 // NOTE(brendan): INPUT: name of file. OUTPUT: none. Parses XML, then finds
 // all nodes matching XPath for title elements and all nodes matching XPath
 // for the links. Source: 21st Century C by Klemens
-internal int 
+internal int32 
 parse(TaxiState *taxiState, char const *infile)
 {
     xmlDocPtr doc = xmlParseFile(infile);
@@ -698,6 +735,7 @@ parse(TaxiState *taxiState, char const *infile)
     xmlXPathFreeContext(context);
     xmlXPathFreeObject(ways);
     xmlXPathFreeObject(nodes);
+    // NOTE(brendan): can comment this out and let the OS free to load faster
     xmlFreeDoc(doc);
     return 0;
 }

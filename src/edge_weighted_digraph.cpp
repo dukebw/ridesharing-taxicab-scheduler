@@ -7,7 +7,6 @@
    This file implements an edge-weighted digraph using adjacency lists.
    ======================================================================== */
 
-#include "helper.h"
 #include "edge_weighted_digraph.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,7 +29,7 @@ printEdge(DirectedEdge *edge);
 void printGraph(EdgeWeightedDigraph *digraph) 
 {
   if (digraph) {
-    for (int vertexIndex = 0;
+    for (int32 vertexIndex = 0;
          vertexIndex < digraph->vertices;
          ++vertexIndex) {
       List<DirectedEdge *>::traverseList(printEdge, digraph->adj[vertexIndex]);
@@ -40,7 +39,7 @@ void printGraph(EdgeWeightedDigraph *digraph)
 }
 
 // NOTE(brendan): add the vertex (from, to) to the digraph
-void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight) 
+void addEdge(EdgeWeightedDigraph *digraph, int32 from, int32 to, real32 weight) 
 {
   DirectedEdge *edge = (DirectedEdge *)malloc(sizeof(DirectedEdge));
   if(edge) {
@@ -63,7 +62,7 @@ void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight)
 
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
 // INPUT: number of vertices we want. OUTPUT: digraph of size V in first param
-void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices) 
+void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int32 vertices) 
 {
   // TODO(brendan): assert inputs not null
   destroyAdjacencyLists(digraph);
@@ -72,7 +71,7 @@ void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices)
     (List<DirectedEdge *> **)malloc(vertices*sizeof(List<DirectedEdge *> *));
   // NOTE(brendan): every malloc introduces a failure point
   if (digraph->adj) {
-    for (int vertexIndex = 0;
+    for (int32 vertexIndex = 0;
         vertexIndex < vertices;
         ++vertexIndex) {
       digraph->adj[vertexIndex] = 0;
@@ -102,7 +101,7 @@ internal void
 destroyAdjacencyLists(EdgeWeightedDigraph *digraph) 
 {
   if (digraph) {
-    for (int vertexIndex = 0; 
+    for (int32 vertexIndex = 0; 
          vertexIndex < digraph->vertices; 
          ++vertexIndex) {
       List<DirectedEdge *>::traverseList(freeDirectedEdge, 

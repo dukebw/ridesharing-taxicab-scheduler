@@ -2,18 +2,19 @@
 #define EDGE_WEIGHTED_DIGRAPH_H
 
 #include "linked_list.h"
+#include "helper.h"
 
 // NOTE(brendan): edge data structure
 struct DirectedEdge {
-  int from;
-  int to;
-  float weight;
+  int32 from;
+  int32 to;
+  real32 weight;
 };
 
 // NOTE(brendan): type for our edge-weighted directed graph
 struct EdgeWeightedDigraph {
-  int vertices;
-  int edges;
+  int32 vertices;
+  int32 edges;
   List<DirectedEdge *> **adj;
 };
 
@@ -21,10 +22,10 @@ struct EdgeWeightedDigraph {
 void printGraph(EdgeWeightedDigraph *digraph);
 
 // NOTE(brendan): initialize EdgeWeighted Digraph with V vertices
-void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int vertices);
+void makeEdgeWeightedDigraph(EdgeWeightedDigraph *digraph, int32 vertices);
 
 // NOTE(brendan): add the vertex (from, to) to the digraph
-void addEdge(EdgeWeightedDigraph *digraph, int from, int to, float weight);
+void addEdge(EdgeWeightedDigraph *digraph, int32 from, int32 to, real32 weight);
 
 // NOTE(brendan): INPUT: edge. OUTPUT: none. frees edge. wrapped to pass
 // to traverseList

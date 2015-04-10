@@ -10,7 +10,7 @@
 #include "taxi_searching.h"
 #include "edge_weighted_digraph.h"
 
-global_variable ShortestPath spAllPairs[INTERSECTIONS][INTERSECTIONS];
+global_variable ShortestPath spAllPairs[MAX_VERTICES][MAX_VERTICES];
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -18,7 +18,7 @@ global_variable ShortestPath spAllPairs[INTERSECTIONS][INTERSECTIONS];
 
 // NOTE(brendan): INPUT: source and destination vertices.
 // OUTPUT: pointer to shortest path from that source to the destination vertex
-ShortestPath *getShortestPath(int source, int dest)
+ShortestPath *getShortestPath(int32 source, int32 dest)
 {
   return &spAllPairs[source][dest];
 }
@@ -29,10 +29,10 @@ ShortestPath *getShortestPath(int source, int dest)
 void makeAllShortestPaths(EdgeWeightedDigraph *digraph)
 {
   // TODO(brendan): assert digraph != 0
-  local_persist DijkstraSPTree spTreesArray[INTERSECTIONS];
-  for (int vertexFrom = 0; vertexFrom < digraph->vertices; ++vertexFrom) {
+  local_persist DijkstraSPTree spTreesArray[MAX_VERTICES];
+  for (int32 vertexFrom = 0; vertexFrom < digraph->vertices; ++vertexFrom) {
     makeDijkstraSPTree(&spTreesArray[vertexFrom], digraph, vertexFrom);
-    for (int vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
+    for (int32 vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
        pathTo(&spTreesArray[vertexFrom], &spAllPairs[vertexFrom][vertexTo],
               vertexTo);
     }

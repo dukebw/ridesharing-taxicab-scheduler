@@ -13,6 +13,7 @@ char error_mode = 's';
 /** To where should I write errors? If this is \c NULL, write to \c stderr. */
 FILE *error_log = 0;
 
+// NOTE(brendan): can make a debug switch to turn this off in release builds
 #define Stopif(assertion, error_action, ...)                      \
         if (assertion) {                                          \
             fprintf(error_log ? error_log : stderr, __VA_ARGS__); \

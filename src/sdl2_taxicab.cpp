@@ -1,10 +1,10 @@
 /* ========================================================================
-File: sdl2_taxicab.cpp
-Date: Mar. 19/15
-Revision: 1
-Creator: Brendan Duke
-Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
-======================================================================== */
+    File: sdl2_taxicab.cpp
+    Date: Mar. 19/15
+    Revision: 1
+    Creator: Brendan Duke
+    Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
+    ======================================================================== */
 
 #include "helper.h"
 #include "taxicab.h"
@@ -17,8 +17,8 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 global_variable SDL_Window* gWindow = NULL;
 
 // NOTE(brendan): Screen dimension constants
-internal const int SCREEN_WIDTH = (int)(0.9*1024);
-internal const int SCREEN_HEIGHT = (int)(0.9*768);
+internal const int SCREEN_WIDTH = 1024;
+internal const int SCREEN_HEIGHT = 768;
 
 internal char *imageNames[] = {(char *)"../misc/north_york_test.png", 
                                (char *)"../misc/BTaxi.bmp",
