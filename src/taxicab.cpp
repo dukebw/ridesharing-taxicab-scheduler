@@ -666,6 +666,7 @@ parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
     // NOTE(brendan): no longer need taxiState->nodes; free it
     free(taxiState->nodes);
     taxiState->nodes = 0;
+    printf("uniqueWayNOdes: %d\n", taxiState->uniqueWayNodes);
     printf("wayNodesCount: %d\n", taxiState->wayNodesCount);
 }
 
