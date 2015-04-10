@@ -24,7 +24,9 @@ ShortestPath *getShortestPath(EdgeWeightedDigraph *digraph, int32 source,
     // TODO(brendan): assert digraph != 0
     // TODO(brendan): testing; make shortestPath tree only when needed
     local_persist DijkstraSPTree spTreesArray[MAX_VERTICES];
-    if (spAllPairs[source][dest].edgeList == 0) {
+
+    // NOTE(brendan): check if shortest path has been made yet
+    if (spTreesArray[source].edgeTo == 0) {
         makeDijkstraSPTree(&spTreesArray[source], digraph, source);
         for (int32 vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
             pathTo(&spTreesArray[source], &spAllPairs[source][vertexTo],
