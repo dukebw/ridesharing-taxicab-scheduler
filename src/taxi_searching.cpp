@@ -11,6 +11,8 @@
 #include "edge_weighted_digraph.h"
 
 global_variable ShortestPath spAllPairs[MAX_VERTICES][MAX_VERTICES];
+// TODO(brendan): testing; make shortestPath tree only when needed
+global_variable DijkstraSPTree spTreesArray[MAX_VERTICES];
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -22,9 +24,7 @@ ShortestPath *getShortestPath(EdgeWeightedDigraph *digraph, int32 source,
                               int32 dest)
 {
     // TODO(brendan): assert digraph != 0
-    // TODO(brendan): testing; make shortestPath tree only when needed
-    local_persist DijkstraSPTree spTreesArray[MAX_VERTICES];
-    if (spAllPairs[source][dest].edgeList == 0) {
+    if (spTreesArray[source].edgeTo == 0) {
         makeDijkstraSPTree(&spTreesArray[source], digraph, source);
         for (int32 vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {
             pathTo(&spTreesArray[source], &spAllPairs[source][vertexTo],
@@ -34,6 +34,8 @@ ShortestPath *getShortestPath(EdgeWeightedDigraph *digraph, int32 source,
     return &spAllPairs[source][dest];
 }
 
+#if 0
+// TODO(brendan): use this again when grid implemented
 // NOTE(brendan): INPUT: edge weighted digraph. OUTPUT: none. UPDATE:none.
 // initializes the spAllPairs global in this module to have all the shortest
 // paths between all pairs in digraph
@@ -49,6 +51,7 @@ void makeAllShortestPaths(EdgeWeightedDigraph *digraph)
         }
     }
 }
+#endif
 
 // -------------------------------------------------------------------------
 // Local functions

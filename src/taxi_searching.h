@@ -12,9 +12,12 @@
 ShortestPath *getShortestPath(EdgeWeightedDigraph *digraph, int32 source,
                               int32 dest);
 
+#if 0
+// TODO(brendan): use this again when grid implemented
 // NOTE(brendan): INPUT: edge weighted digraph. OUTPUT: none. UPDATE:none.
 // initializes the spAllPairs global in this module to have all the shortest
 // paths between all pairs in digraph
 void makeAllShortestPaths(EdgeWeightedDigraph *digraph);
+#endif
 
 #endif /* TAXI_SEARCHING_H */
