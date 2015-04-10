@@ -1,10 +1,10 @@
 /* ========================================================================
-File: taxicab.cpp
-Date: Apr. 5/15
-Revision: 1
-Creator: Brendan Duke
-Notice: (C) Copyright 2015 by BRD Inc. All Rights Reserved.
-======================================================================== */
+   File: taxicab.cpp
+   Date: Apr. 5/15
+   Revision: 1
+   Creator: Brendan Duke
+   Notice: (C) Copyright 2015 by BRD Inc. All Rights Reserved.
+   ======================================================================== */
 
 #include "taxicab.h"
 #include "dijkstra_sp.h"
@@ -663,6 +663,9 @@ parseWays(TaxiState *taxiState, xmlDocPtr doc, xmlXPathObjectPtr ways)
             }
         }
     }
+    // NOTE(brendan): no longer need taxiState->nodes; free it
+    free(taxiState->nodes);
+    taxiState->nodes = 0;
     printf("wayNodesCount: %d\n", taxiState->wayNodesCount);
 }
 
