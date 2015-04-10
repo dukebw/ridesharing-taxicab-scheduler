@@ -1,10 +1,10 @@
 /* ========================================================================
-File: sdl2_taxicab.cpp
-Date: Mar. 19/15
-Revision: 1
-Creator: Brendan Duke
-Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
-======================================================================== */
+    File: sdl2_taxicab.cpp
+    Date: Mar. 19/15
+    Revision: 1
+    Creator: Brendan Duke
+    Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
+    ======================================================================== */
 
 #include "helper.h"
 #include "taxicab.h"
@@ -17,8 +17,8 @@ Notice: (C) Copyright 2015 by ADK Inc. All Rights Reserved.
 global_variable SDL_Window* gWindow = NULL;
 
 // NOTE(brendan): Screen dimension constants
-internal const int SCREEN_WIDTH = (int)(0.9*1024);
-internal const int SCREEN_HEIGHT = (int)(0.9*768);
+internal const int SCREEN_WIDTH = 1024;
+internal const int SCREEN_HEIGHT = 768;
 
 internal char *imageNames[] = {(char *)"../misc/north_york_test.png", 
                                (char *)"../misc/BTaxi.bmp",
@@ -190,29 +190,35 @@ int main(int argc, char *argv[])
 {
     // NOTE(brendan): state (model) of the taxis on the road network
     TaxiState taxiState = {};
-    taxiState.screenWidth = SCREEN_WIDTH;
-    taxiState.screenHeight = SCREEN_HEIGHT;
+    taxiState.nodes = (Node *)malloc(MAX_NODES*sizeof(Node));
+    if (taxiState.nodes) {
+        taxiState.screenWidth = SCREEN_WIDTH;
+        taxiState.screenHeight = SCREEN_HEIGHT;
 
-    if (!sdl2Init(&taxiState.renderer)) {
-        printf("Failed to initialize!\n");
-    }
-    else if (!sdl2LoadMedia(&taxiState)) {
-        printf("Failed to load media!\n");
+        if (!sdl2Init(&taxiState.renderer)) {
+            printf("Failed to initialize!\n");
+        }
+        else if (!sdl2LoadMedia(&taxiState)) {
+            printf("Failed to load media!\n");
+        }
+        else {
+            // NOTE(brendan): Main loop flag
+            bool globalRunning = true;
+
+            srand((unsigned)time(0));
+
+            int previousTime = SDL_GetTicks(), elapsedTime = 0;
+            // NOTE(brendan): while application is running
+            while (globalRunning) {
+                elapsedTime = SDL_GetTicks() - previousTime;
+                previousTime = SDL_GetTicks();
+                globalRunning = sdl2HandleEvents();
+                updateAndRender(&taxiState, elapsedTime);
+            }
+        }
     }
     else {
-        // NOTE(brendan): Main loop flag
-        bool globalRunning = true;
-
-        srand((unsigned)time(0));
-
-        int previousTime = SDL_GetTicks(), elapsedTime = 0;
-        // NOTE(brendan): while application is running
-        while (globalRunning) {
-            elapsedTime = SDL_GetTicks() - previousTime;
-            previousTime = SDL_GetTicks();
-            globalRunning = sdl2HandleEvents();
-            updateAndRender(&taxiState, elapsedTime);
-        }
+        printf("Failed to allocate nodes array in taxiState\n");
     }
 
     // NOTE(brendan): Free resources and close SDL

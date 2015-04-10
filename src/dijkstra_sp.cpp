@@ -24,17 +24,17 @@ internal void relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge);
 // OUTPUT: shortest-path tree from that source vertex to all other vertices
 // in the graph, returned in first parameter passed
 void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph, 
-                        int source)
+                        int32 source)
 {
   // TODO(brendan): assert spTree not null
   free(spTree->distTo);
   free(spTree->edgeTo);
   // NOTE(brendan): N = # of vertices in digraph
-  int N = digraph->vertices;
-  spTree->distTo = (float *)malloc(N*sizeof(float));
+  int32 N = digraph->vertices;
+  spTree->distTo = (real32 *)malloc(N*sizeof(real32));
   spTree->edgeTo = (DirectedEdge **)malloc(N*sizeof(DirectedEdge *));
   if (spTree->distTo && spTree->edgeTo) {
-    for (int distToIndex = 0; distToIndex < N; ++distToIndex) {
+    for (int32 distToIndex = 0; distToIndex < N; ++distToIndex) {
       spTree->distTo[distToIndex] = INFINITY;
     }
     spTree->distTo[source] = 0.0f;
@@ -45,7 +45,7 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
     makeIndexMinPQ(&minpq, digraph->vertices);
     pqInsert(&minpq, source, spTree->distTo[source]);
     while (!pqEmpty(&minpq)) {
-      int v = pqDelMin(&minpq);
+      int32 v = pqDelMin(&minpq);
       List<DirectedEdge *>::traverseList(relax, spTree, &minpq,
                                          digraph->adj[v]);
     }
@@ -60,7 +60,7 @@ void makeDijkstraSPTree(DijkstraSPTree *spTree, EdgeWeightedDigraph *digraph,
 // vertex. OUTPUT: shortest path list of directed edges from that
 // source vertex to the destination vertex, output in shortestPath param.
 void
-pathTo(DijkstraSPTree *spTree, ShortestPath *shortestPath, int dest)
+pathTo(DijkstraSPTree *spTree, ShortestPath *shortestPath, int32 dest)
 {
   // TODO(brendan): assert input not null
   List<DirectedEdge *>::traverseList(freeDirectedEdge, shortestPath->edgeList);
@@ -90,7 +90,7 @@ relax(void *spTreePtr, void *minPQPtr, DirectedEdge *edge)
   DijkstraSPTree *spTree = (DijkstraSPTree *)spTreePtr;
   IndexMinPQ *minpq = (IndexMinPQ *)minPQPtr;
   // TODO(brendan): assert inputs not null
-  int v = edge->from, w = edge->to;
+  int32 v = edge->from, w = edge->to;
   if (spTree->distTo[w] > spTree->distTo[v] + edge->weight) {
     spTree->distTo[w] = spTree->distTo[v] + edge->weight;
     spTree->edgeTo[w] = edge;

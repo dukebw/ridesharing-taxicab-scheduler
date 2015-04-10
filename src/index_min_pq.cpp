@@ -7,7 +7,6 @@
    ======================================================================== */
 
 #include "index_min_pq.h"
-#include "helper.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -15,9 +14,9 @@
 // Forward declarations
 // -------------------------------------------------------------------------
 
-internal void pqSwim(IndexMinPQ *minPQ, int key);
-internal void pqSink(IndexMinPQ *minPQ, int key);
-internal void pqExch(IndexMinPQ *minPQ, int keyOne, int keyTwo);
+internal void pqSwim(IndexMinPQ *minPQ, int32 key);
+internal void pqSink(IndexMinPQ *minPQ, int32 key);
+internal void pqExch(IndexMinPQ *minPQ, int32 keyOne, int32 keyTwo);
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -26,7 +25,7 @@ internal void pqExch(IndexMinPQ *minPQ, int keyOne, int keyTwo);
 // NOTE(brendan): INPUT: maximum size of priority queue.
 // OUTPUT: pointer to priority queue of max size NMAX, output in minPQ
 void
-makeIndexMinPQ(IndexMinPQ *minPQ, int NMAX)
+makeIndexMinPQ(IndexMinPQ *minPQ, int32 NMAX)
 {
   // TODO(brendan): assert minPQ is not 0
   minPQ->NMAX = NMAX;
@@ -35,11 +34,11 @@ makeIndexMinPQ(IndexMinPQ *minPQ, int NMAX)
   free(minPQ->pq);
   free(minPQ->qp);
   free(minPQ->weights);
-  minPQ->pq = (int *)malloc((NMAX + 1)*sizeof(int));
-  minPQ->qp = (int *)malloc((NMAX + 1)*sizeof(int));
-  minPQ->weights = (float *)malloc((NMAX + 1)*sizeof(float));
+  minPQ->pq = (int32 *)malloc((NMAX + 1)*sizeof(int32));
+  minPQ->qp = (int32 *)malloc((NMAX + 1)*sizeof(int32));
+  minPQ->weights = (real32 *)malloc((NMAX + 1)*sizeof(real32));
   if (minPQ->pq && minPQ->qp && minPQ->weights) {
-    for (int index = 0; index < (NMAX + 1); ++index) {
+    for (int32 index = 0; index < (NMAX + 1); ++index) {
       minPQ->qp[index] = -1;
     }
   }
@@ -49,9 +48,9 @@ makeIndexMinPQ(IndexMinPQ *minPQ, int NMAX)
   }
 }
 
-// NOTE(brendan): INPUT: IndexMinPQ, a index (int), and a weight (float)
+// NOTE(brendan): INPUT: IndexMinPQ, a index (int32), and a weight (real32)
 // OUTPUT: none. UPDATE: minpq is updated; index is inserted with weight
-void pqInsert(IndexMinPQ *minPQ, int index, float weight)
+void pqInsert(IndexMinPQ *minPQ, int32 index, real32 weight)
 {
   // TODO(brendan): assert 0 <= index < NMAX and minPQ does not contain index
   // also assert minPQ is not null
@@ -64,10 +63,10 @@ void pqInsert(IndexMinPQ *minPQ, int index, float weight)
 
 // NOTE(brendan): INPUT: IndexMinPQ. OUTPUT: index associated with the deleted min. 
 // UPDATE: minpq; min-weighted index is deleted
-int pqDelMin(IndexMinPQ *minPQ)
+int32 pqDelMin(IndexMinPQ *minPQ)
 {
   // TODO(brendan): assert minPQ != 0 and minPQ->N > 0
-  int min = minPQ->pq[1];
+  int32 min = minPQ->pq[1];
   pqExch(minPQ, 1, minPQ->N--);
   pqSink(minPQ, 1);
   // NOTE(brendan): delete
@@ -77,14 +76,14 @@ int pqDelMin(IndexMinPQ *minPQ)
 
 // NOTE(brendan): INPUT: min pq. OUTPUT: true if minPQ is empty; false 
 // otherwise
-bool pqEmpty(IndexMinPQ *minPQ)
+bool32 pqEmpty(IndexMinPQ *minPQ)
 {
   // TODO(brendan): assert minPQ != 0
   return (minPQ->N == 0);
 }
 
 // NOTE(brendan): INPUT: min-pq, index v. OUTPUT: true iff v is in minPQ
-bool pqContains(IndexMinPQ *minPQ, int index)
+bool32 pqContains(IndexMinPQ *minPQ, int32 index)
 {
   // TODO(brendan): assert minPQ != 0
   return (minPQ->qp[index] != -1);
@@ -92,7 +91,7 @@ bool pqContains(IndexMinPQ *minPQ, int index)
 
 // NOTE(brendan): INPUT: min-pq, index, new weighting for index.
 // OUTPUT: none. UPDATE: min-pq; index is updated with new (lower) weighting
-void pqDecreaseWeight(IndexMinPQ *minPQ, int index, float weight)
+void pqDecreaseWeight(IndexMinPQ *minPQ, int32 index, real32 weight)
 {
   // TODO(brendan): assert minPQ != 0 and 0 <= index < minPQ->NMAX
   // and minPQ contains index, and the new weight < previous weight
@@ -118,10 +117,10 @@ void destroyMinPQMembers(IndexMinPQ *minPQ)
 // Local functions
 // -------------------------------------------------------------------------
 
-// NOTE(brendan): INPUT: IndexMinPQ, a key (int) to swim. OUTPUT: none.
+// NOTE(brendan): INPUT: IndexMinPQ, a key (int32) to swim. OUTPUT: none.
 // UPDATE: minpq; the given key is swam upwards until minPQ is heap-sorted
 internal void
-pqSwim(IndexMinPQ *minPQ, int key)
+pqSwim(IndexMinPQ *minPQ, int32 key)
 {
   // TODO(brendan): assert minPQ is not 0
   while ((key > 1) && (minPQ->weights[key/2] > minPQ->weights[key])) {
@@ -133,11 +132,11 @@ pqSwim(IndexMinPQ *minPQ, int key)
 // NOTE(brendan): INPUT: IndexMinPQ minpq, a key to sink. OUTPUT: none.
 // UPDATE: minPQ; key is swam down until minPQ is heap sorted
 internal void
-pqSink(IndexMinPQ *minPQ, int key)
+pqSink(IndexMinPQ *minPQ, int32 key)
 {
   // TODO(brendan): assert minPQ != 0
   while (2*key <= minPQ->N) {
-    int j = 2*key;
+    int32 j = 2*key;
     if ((j < minPQ->N) && (minPQ->weights[j] > minPQ->weights[j + 1])) {
       ++j;
     }
@@ -152,10 +151,10 @@ pqSink(IndexMinPQ *minPQ, int key)
 // NOTE(brendan): INPUT: IndexMinPQ, two ints (keys) to exchange
 // OUTPUT: none. UPDATE: minpq; keyOne and keyTwo elements are exchanged
 internal void
-pqExch(IndexMinPQ *minPQ, int keyOne, int keyTwo)
+pqExch(IndexMinPQ *minPQ, int32 keyOne, int32 keyTwo)
 {
   // TODO(brendan): assert minPQ is not 0
-  int swap = minPQ->pq[keyOne];
+  int32 swap = minPQ->pq[keyOne];
   minPQ->pq[keyOne] = minPQ->pq[keyTwo];
   minPQ->pq[keyTwo] = swap;
   minPQ->qp[minPQ->pq[keyOne]] = keyOne;
