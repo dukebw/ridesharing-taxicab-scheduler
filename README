@@ -1,2 +1,4 @@
 Authors: Kuir Aguer, Brendan Duke, Jaeden Guo
 This project implements a ridesharing taxicab system.
+
+Run the program on windows from the build/taxicab.exe file and all the source fles are in the src directory
