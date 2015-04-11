@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define SPEED_FACTOR 0.0008f
+#define SPEED_FACTOR 0.0016f
 #define TAXI_QUERY_INTERVAL 1000
 #define NO_PATH -1
 

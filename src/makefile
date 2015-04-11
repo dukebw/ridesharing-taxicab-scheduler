@@ -10,7 +10,7 @@ CC=g++
 SOURCES=sdl2_taxicab.cpp edge_weighted_digraph.cpp taxicab.cpp\
 				dijkstra_sp.cpp index_min_pq.cpp taxi_searching.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=taxicab_scheduler
+EXECUTABLE=taxicab_scheduler_6
 # Build directory
 BUILD = ../build/
 
