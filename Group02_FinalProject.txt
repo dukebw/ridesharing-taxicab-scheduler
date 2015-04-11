@@ -1,0 +1,14 @@
+Team Members		Roles			SN
+----------------------------------------------------------
+ Kuir Aguer		D/T/P			0540108
+Brendan Duke 		D/P/T			0770590
+Jaeden Guo		L/T			1073796
+
+D = Designer, P = Planner, T = Tester, L = Log Admin
+This project implements a ridesharing taxicab system.
+
+Dated statement: 
+”the fact that the work being submittedby you is your group work.”
+
+Additional Comments:
+Run the program on windows from the build/taxicab.exe file and all the source fles are in the src directory
