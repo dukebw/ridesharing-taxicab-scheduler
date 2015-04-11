@@ -11,4 +11,9 @@ Dated statement:
 ”the fact that the work being submittedby you is your group work.”
 
 Additional Comments:
-Run the program on windows from the build/taxicab.exe file and all the source fles are in the src directory
+Run the program on windows from the build/taxicab.exe file and all the source
+fles are in the src directory.
+
+The lines drawn on the map are the edges of the digraph. Taxis turn red when
+they have reached the maximum number of passengers. Green circles represent
+pickup queries, and orange circles represent dropoff queries.
