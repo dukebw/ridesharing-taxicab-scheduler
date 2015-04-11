@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define SPEED_FACTOR 0.0016f
+#define SPEED_FACTOR 0.0008f
 #define TAXI_QUERY_INTERVAL 1000
 #define NO_PATH -1
 
@@ -50,9 +50,6 @@ inline int32 randomVertex(EdgeWeightedDigraph *graph);
 internal real32
 netPathWeight(EdgeWeightedDigraph *digraph, int32 startPoint32, int32 midPoint,
               int32 endPoint);
-
-internal int32
-getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState);
 
 inline void removeTaxiQuery(Taxi *taxi);
 
@@ -112,8 +109,7 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                 if ((currentTaxi->passengerCount < 
                      taxiState->maxPassengerCount) &&
                     (currentTaxi->queryCount < taxiState->maxQueryCount)) {
-                    int32 currentTaxiVertex = getTaxiCurrentVertex(currentTaxi, 
-                                                                   taxiState);
+                    int32 currentTaxiVertex = currentTaxi->currentVertex;
                     int32 firstPickupEnd = NO_PATH;
                     if (currentTaxi->schedule) {
                         firstPickupEnd = currentTaxi->schedule->item.vertex;
@@ -289,6 +285,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
             (Vector *)malloc(taxiState->uniqueWayNodes*sizeof(Vector));
 
         // NOTE(brendan): initialize edges in graph
+        // TODO(brendan): remove; testing
+        int32 edgeCount = 0;
         for (int32 nodeIndex = 0;
              nodeIndex < taxiState->wayNodesCount; 
              ++nodeIndex) {
@@ -303,14 +301,21 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
                             previousNode->vertex, distance);
                     addEdge(&taxiState->roadNetwork, previousNode->vertex,
                             currentNode->vertex, distance);
+
+                    // TODO(brendan): remove; testing
+                    edgeCount += 2;
                 }
             }
             taxiState->nodeCoords[currentNode->vertex] =
                 mapUnitsToPixels(taxiState, taxiState->wayNodes[nodeIndex].dis);
         }
+        // TODO(brendan): remove; testing
+        printf("edge count: %d\n", edgeCount);
 
+#if 0
         // TODO(brendan): make grid and do this for the grid
-        /* makeAllShortestPaths(&taxiState->roadNetwork); */
+        makeAllShortestPaths(&taxiState->roadNetwork);
+#endif
 
         // NOTE(brendan): init taxis
         for (int32 taxiIndex = 0; taxiIndex < NUMBER_OF_TAXIS; ++taxiIndex) {
@@ -329,6 +334,8 @@ void updateAndRender(TaxiState *taxiState, int32 dt)
 // Local functions
 // ------------------------------------------------------------------------
 
+// NOTE(brendan): INPUT: taxiState, a vector in kilometers.
+// OUTPUT: a vector scaled down to pixels
 inline Vector
 mapUnitsToPixels(TaxiState *taxiState, Vector unitsVec)
 {
@@ -350,17 +357,6 @@ findDistance(Vector vectorOne, Vector vectorTwo)
     real32 result = sqrt(deltaX*deltaX + deltaY*deltaY);
     return result;
 }
-
-#if 0
-// TODO(brendan): testing; remove
-internal void
-debugPrintList(List<Query> *list)
-{
-    for (; list; list = list->next) {
-        printf(list->next ? "%d -> " : "%d\n", list->item.vertex);
-    }
-}
-#endif
 
 // NOTE(brendan): INPUT: min taxi-query, taxi to set, pickup and
 // dropoff insertion points. OUTPUT: none. UPDATE: minTaxiQuery is
@@ -464,15 +460,6 @@ setTaxiVelocity(Taxi *taxi, TaxiState *taxiState)
     }
 }
 
-// TODO(brendan): change/remove?
-// INPUT: taxi, taxi-state. OUTPUT: the vertex that that taxi is currently
-// at, according to its x and y position
-internal int32
-getTaxiCurrentVertex(Taxi *taxi, TaxiState *taxiState)
-{
-    return taxi->currentVertex;
-}
-
 // NOTE(brendan): INPUT: taxi. OUTPUT: none. UPDATE: changes taxi's number
 // of passengers
 inline void
@@ -509,7 +496,7 @@ initTaxiCab(Taxi *taxi, TaxiState *taxiState, int32 passengerCount,
     taxi->position = taxiState->nodeCoords[vertex];
     taxi->currentVertex = vertex;
     if (taxi->schedule) {
-        int32 taxiCurrentVertex = getTaxiCurrentVertex(taxi, taxiState);
+        int32 taxiCurrentVertex = taxi->currentVertex;
         if (taxiCurrentVertex == taxi->schedule->item.vertex) {
             removeTaxiQuery(taxi, taxiState);
         }

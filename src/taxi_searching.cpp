@@ -11,8 +11,6 @@
 #include "edge_weighted_digraph.h"
 
 global_variable ShortestPath spAllPairs[MAX_VERTICES][MAX_VERTICES];
-// TODO(brendan): testing; make shortestPath tree only when needed
-global_variable DijkstraSPTree spTreesArray[MAX_VERTICES];
 
 // -------------------------------------------------------------------------
 // Access functions
@@ -24,6 +22,10 @@ ShortestPath *getShortestPath(EdgeWeightedDigraph *digraph, int32 source,
                               int32 dest)
 {
     // TODO(brendan): assert digraph != 0
+    // TODO(brendan): testing; make shortestPath tree only when needed
+    local_persist DijkstraSPTree spTreesArray[MAX_VERTICES];
+
+    // NOTE(brendan): check if shortest path has been made yet
     if (spTreesArray[source].edgeTo == 0) {
         makeDijkstraSPTree(&spTreesArray[source], digraph, source);
         for (int32 vertexTo = 0; vertexTo < digraph->vertices; ++vertexTo) {

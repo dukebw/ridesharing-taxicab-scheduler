@@ -7,7 +7,7 @@
 #include <SDL2/SDL.h>
 
 #define NUMBER_OF_IMAGES 5
-#define NUMBER_OF_TAXIS 6
+#define NUMBER_OF_TAXIS 12
 #define MAX_NODES 32768
 #define MAX_WAY_NODES 4096
 
